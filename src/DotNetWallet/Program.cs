@@ -58,6 +58,7 @@ namespace DotNetWallet
 			{
 				AssertArgumentsLenght(args.Length, 1, 2);
 				walletFileName = GetWalletFileName(args);
+				AssertWalletNotExists(walletFileName);
 
 			}
 			#endregion
@@ -88,7 +89,7 @@ namespace DotNetWallet
 			#region SendCommand
 			if (command == "send")
 			{
-				//AssertArgumentsLenght(args.Length, 1, 2);
+				AssertArgumentsLenght(args.Length, 3, 4);
 				walletFileName = GetWalletFileName(args);
 				AssertCorrectWalletFormat(walletFileName);
 
@@ -109,7 +110,11 @@ namespace DotNetWallet
 
 			Exit();
 		}
-
+		public static void AssertWalletNotExists(string walletFileName)
+		{
+			//todo
+			throw new NotImplementedException();
+		}
 		public static void AssertCorrectWalletFormat(string walletFileName)
 		{
 			//todo
