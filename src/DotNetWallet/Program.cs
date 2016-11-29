@@ -28,6 +28,10 @@ namespace DotNetWallet
 		{
 			args = new string[] { "send", "btc=3.2", "address=1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX" };
 
+			// Load config file
+			// It also creates it with default settings if doesn't exist
+			Config.Load();
+
 			if (args.Length == 0)
 			{
 				WriteLine("No command is specified.");

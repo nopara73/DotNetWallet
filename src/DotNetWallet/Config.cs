@@ -14,7 +14,10 @@ namespace DotNetWallet
 		static Config()
 		{
 			if (!File.Exists(ConfigFileSerializer.ConfigFilePath))
+			{
 				Save();
+				Console.WriteLine($"{ConfigFileSerializer.ConfigFilePath} was missing. It has been created created with default settings.");
+			}
 			Load();
 		}
 
