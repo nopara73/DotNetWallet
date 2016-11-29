@@ -29,8 +29,9 @@ namespace DotNetWallet
 
 		public static void Main(string[] args)
 		{
-			//args = new string[] { "generate-wallet", "wallet-file=Wallet6.json" };
-			args = new string[] { "recover-wallet", "wallet-file=Wallet5.json" };
+			//args = new string[] { "generate-wallet", "wallet-file=Wallet7.json" };
+			//args = new string[] { "recover-wallet", "wallet-file=Wallet5.json" };
+			args = new string[] { "show-balances", "wallet-file=Wallet7.json" };
 
 			// Load config file
 			// It also creates it with default settings if doesn't exist
@@ -134,7 +135,8 @@ namespace DotNetWallet
 			{
 				AssertArgumentsLenght(args.Length, 1, 2);
 				walletFileName = GetWalletFileName(args);
-				AssertCorrectWalletFormat(walletFileName);
+				Safe safe = DecryptWalletByAskingForPassword(walletFileName);
+
 			}
 			#endregion
 			#region ShowHistoryCommand
@@ -142,7 +144,7 @@ namespace DotNetWallet
 			{
 				AssertArgumentsLenght(args.Length, 1, 2);
 				walletFileName = GetWalletFileName(args);
-				AssertCorrectWalletFormat(walletFileName);
+				Safe safe = DecryptWalletByAskingForPassword(walletFileName);
 			}
 			#endregion
 			#region ReceiveCommand
@@ -150,7 +152,7 @@ namespace DotNetWallet
 			{
 				AssertArgumentsLenght(args.Length, 1, 2);
 				walletFileName = GetWalletFileName(args);
-				AssertCorrectWalletFormat(walletFileName);
+				Safe safe = DecryptWalletByAskingForPassword(walletFileName);
 			}
 			#endregion
 			#region SendCommand
@@ -158,8 +160,6 @@ namespace DotNetWallet
 			{
 				AssertArgumentsLenght(args.Length, 3, 4);
 				walletFileName = GetWalletFileName(args);
-				AssertCorrectWalletFormat(walletFileName);
-
 				try
 				{
 					var amountToSend = new Money(GetAmountToSend(args), MoneyUnit.BTC);
@@ -171,17 +171,55 @@ namespace DotNetWallet
 					WriteLine(ex);
 					Exit();
 				}
+				Safe safe = DecryptWalletByAskingForPassword(walletFileName);
 			}
 			#endregion
 
 			Exit();
 		}
+
+		private static Safe DecryptWalletByAskingForPassword(string walletFileName)
+		{
+			Safe safe = null;
+			string pw;
+			bool correctPw = false;
+			WriteLine("Type your password:");
+			do
+			{
+				pw = PasswordConsole.ReadPassword();
+				try
+				{
+					safe = Safe.Load(pw, walletFileName);
+					AssertCorrectNetwork(safe.Network);
+					correctPw = true;
+				}
+				catch (System.Security.SecurityException)
+				{
+					WriteLine("Invalid password, try again:");
+					correctPw = false;
+				}
+			} while (!correctPw);
+
+			if (safe == null)
+				throw new Exception("Wallet could not be decrypted.");
+			WriteLine("Wallet is decrypted.");
+			return safe;
+		}
+
 		public static void AssertWalletNotExists(string walletFileName)
 		{
 			if(File.Exists(walletFileName))
 			{
 				WriteLine($"A wallet, named {walletFileName} already exists.");
 				Exit();
+			}
+		}
+		public static void AssertCorrectNetwork(Network network)
+		{
+			if(network != Config.Network)
+			{
+				WriteLine($"The wallet you want to load is on the {network} Bitcoin network.");
+				WriteLine($"But your config file specifies {Config.Network} Bitcoin network.");
 			}
 		}
 		public static void AssertCorrectMnemonicFormat(string mnemonic)
@@ -196,11 +234,6 @@ namespace DotNetWallet
 
 			WriteLine("Incorrect mnemonic format.");
 			Exit();
-		}
-		public static void AssertCorrectWalletFormat(string walletFileName)
-		{
-			//todo
-			throw new NotImplementedException();
 		}
 		private static string GetAddressToSend(string[] args)
 		{

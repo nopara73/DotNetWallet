@@ -10,6 +10,7 @@ namespace DotNetWallet.KeyManagement
     public class Safe
     {
 		private Network _network;
+		public Network Network => _network;
 		private ExtKey _seedPrivateKey;
 
 		public string WalletFilePath { get; }
@@ -66,6 +67,10 @@ namespace DotNetWallet.KeyManagement
 
 			return mnemonic;
 		}
+		private void SetSeed(ExtKey seedExtKey)
+		{
+			_seedPrivateKey = seedExtKey;
+		}
 		private void Save(string password, string walletFilePath, Network network)
 		{
 			if (File.Exists(walletFilePath))
@@ -86,6 +91,34 @@ namespace DotNetWallet.KeyManagement
 				encryptedBitcoinPrivateKeyString,
 				chainCodeString,
 				networkString);
+		}
+		public static Safe Load(string password, string walletFilePath)
+		{
+			if (!File.Exists(walletFilePath))
+				throw new Exception("WalletFileDoesNotExists");
+
+			var walletFileRawContent = WalletFileSerializer.Deserialize(walletFilePath);
+
+			var encryptedBitcoinPrivateKeyString = walletFileRawContent.EncryptedSeed;
+			var chainCodeString = walletFileRawContent.ChainCode;
+
+			var chainCode = System.Convert.FromBase64String(chainCodeString);
+
+			Network network;
+			var networkString = walletFileRawContent.Network;
+			if (networkString == Network.Main.ToString())
+				network = Network.Main;
+			else if (networkString == Network.TestNet.ToString())
+				network = Network.TestNet;
+			else throw new Exception("NotRecognizedNetworkInWalletFile");
+
+			var safe = new Safe(password, walletFilePath, network);
+
+			var privateKey = Key.Parse(encryptedBitcoinPrivateKeyString, password, safe._network);
+			var seedExtKey = new ExtKey(privateKey, chainCode);
+			safe.SetSeed(seedExtKey);
+
+			return safe;
 		}
 	}
 }
