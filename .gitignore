@@ -241,3 +241,9 @@ ModelManifest.xml
 # FAKE - F# Make
 .fake/
 /src/DotNetWallet/Config.json
+/src/DotNetWallet/Wallet.json
+/src/DotNetWallet/Wallet2.json
+/src/DotNetWallet/Wallet3.json
+/src/DotNetWallet/Wallet4.json
+/src/DotNetWallet/Wallet5.json
+/src/DotNetWallet/Wallet6.json

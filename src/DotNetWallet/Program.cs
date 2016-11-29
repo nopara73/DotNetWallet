@@ -1,4 +1,6 @@
-﻿using NBitcoin;
+﻿using DotNetWallet.Helpers;
+using DotNetWallet.KeyManagement;
+using NBitcoin;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -17,6 +19,7 @@ namespace DotNetWallet
 		{
 			"help",
 			"generate-wallet",
+			"recover-wallet",
 			"show-balances",
 			"show-history",
 			"receive",
@@ -26,7 +29,8 @@ namespace DotNetWallet
 
 		public static void Main(string[] args)
 		{
-			args = new string[] { "send", "btc=3.2", "address=1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX" };
+			//args = new string[] { "generate-wallet", "wallet-file=Wallet6.json" };
+			args = new string[] { "recover-wallet", "wallet-file=Wallet5.json" };
 
 			// Load config file
 			// It also creates it with default settings if doesn't exist
@@ -43,6 +47,14 @@ namespace DotNetWallet
 			{
 				WriteLine("Wrong command is specified.");
 				DisplayHelp();
+			}
+			foreach(var arg in args.Skip(1))
+			{
+				if(!arg.Contains('='))
+				{
+					WriteLine($"Wrong argument format specified: {arg}");
+					Exit();
+				}
 			}
 
 			#region HelpCommand
@@ -62,6 +74,59 @@ namespace DotNetWallet
 				walletFileName = GetWalletFileName(args);
 				AssertWalletNotExists(walletFileName);
 
+				string pw;
+				string pwConf;
+				do
+				{
+					// 1. Get password from user
+					WriteLine("Choose a password:");
+					pw = PasswordConsole.ReadPassword();
+					// 2. Get password confirmation from user
+					WriteLine("Confirm password:");
+					pwConf = PasswordConsole.ReadPassword();
+
+					if (pw != pwConf) WriteLine("Passwords do not match. Try again!");
+				} while (pw != pwConf);
+
+				// 3. Create wallet
+				string mnemonic;
+				Safe safe = Safe.Create(out mnemonic, pw, walletFileName, Config.Network);
+				// If no exception thrown the wallet is successfully created.
+				WriteLine();
+				WriteLine("Wallet is successfully created.");
+				WriteLine($"Wallet file: {walletFileName}");
+
+				// 4. Display mnemonic
+				WriteLine();
+				WriteLine("Write down the following mnemonic words.");
+				WriteLine("With the mnemonic words AND your password you can recover this wallet by using the recover-wallet command.");
+				WriteLine();
+				WriteLine("-------");
+				WriteLine(mnemonic);
+				WriteLine("-------");
+				WriteLine();
+			}
+			#endregion
+			#region RecoverWalletCommand
+			if (command == "recover-wallet")
+			{
+				AssertArgumentsLenght(args.Length, 1, 2);
+				walletFileName = GetWalletFileName(args);
+				AssertWalletNotExists(walletFileName);
+
+				WriteLine($"Your software is configured using the Bitcoin {Config.Network} network.");
+				WriteLine("Provide your mnemonic words, separated by spaces:");
+				var mnemonic = ReadLine();
+				AssertCorrectMnemonicFormat(mnemonic);
+
+				WriteLine("Provide your password. Please note the wallet cannot check if your password is correct or not. If you provide a wrong password a wallet will be recovered with your provided mnemonic AND password pair:");
+				var password = PasswordConsole.ReadPassword();
+
+				Safe safe = Safe.Recover(mnemonic, password, walletFileName, Config.Network);
+				// If no exception thrown the wallet is successfully recovered.
+				WriteLine();
+				WriteLine("Wallet is successfully recovered.");
+				WriteLine($"Wallet file: {walletFileName}");
 			}
 			#endregion
 			#region ShowBalancesCommand
@@ -113,8 +178,24 @@ namespace DotNetWallet
 		}
 		public static void AssertWalletNotExists(string walletFileName)
 		{
-			//todo
-			throw new NotImplementedException();
+			if(File.Exists(walletFileName))
+			{
+				WriteLine($"A wallet, named {walletFileName} already exists.");
+				Exit();
+			}
+		}
+		public static void AssertCorrectMnemonicFormat(string mnemonic)
+		{
+			try
+			{
+				if (new Mnemonic(mnemonic).IsValidChecksum)
+					return;
+			}
+			catch (FormatException) { }
+			catch (NotSupportedException) { }
+
+			WriteLine("Incorrect mnemonic format.");
+			Exit();
 		}
 		public static void AssertCorrectWalletFormat(string walletFileName)
 		{
