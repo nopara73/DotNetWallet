@@ -3,11 +3,9 @@ using DotNetWallet.KeyManagement;
 using NBitcoin;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using static System.Console;
 
 namespace DotNetWallet
@@ -29,9 +27,14 @@ namespace DotNetWallet
 
 		public static void Main(string[] args)
 		{
-			//args = new string[] { "generate-wallet", "wallet-file=Wallet7.json" };
-			//args = new string[] { "recover-wallet", "wallet-file=Wallet5.json" };
-			args = new string[] { "show-balances", "wallet-file=Wallet7.json" };
+			//args = new string[] { "help" };
+			//args = new string[] { "generate-wallet" };
+			//args = new string[] { "generate-wallet", "wallet-file=Wallet2.json" };
+			////math super cool donate beach mobile sunny web board kingdom bacon crisp
+			////no password
+			//args = new string[] { "recover-wallet", "wallet-file=Wallet3.json" };
+			//args = new string[] { "show-balances" };
+			//args = new string[] { "show-balances", "wallet-file=Wallet3.json" };
 
 			// Load config file
 			// It also creates it with default settings if doesn't exist
@@ -65,15 +68,13 @@ namespace DotNetWallet
 				DisplayHelp();
 			}
 			#endregion
-
-			var walletFileName = Config.DefaultWalletFileName;
-
+			
 			#region GenerateWalletCommand
 			if (command == "generate-wallet")
 			{
 				AssertArgumentsLenght(args.Length, 1, 2);
-				walletFileName = GetWalletFileName(args);
-				AssertWalletNotExists(walletFileName);
+				var walletFilePath = GetWalletFilePath(args);
+				AssertWalletNotExists(walletFilePath);
 
 				string pw;
 				string pwConf;
@@ -91,11 +92,11 @@ namespace DotNetWallet
 
 				// 3. Create wallet
 				string mnemonic;
-				Safe safe = Safe.Create(out mnemonic, pw, walletFileName, Config.Network);
+				Safe safe = Safe.Create(out mnemonic, pw, walletFilePath, Config.Network);
 				// If no exception thrown the wallet is successfully created.
 				WriteLine();
 				WriteLine("Wallet is successfully created.");
-				WriteLine($"Wallet file: {walletFileName}");
+				WriteLine($"Wallet file: {walletFilePath}");
 
 				// 4. Display mnemonic
 				WriteLine();
@@ -112,8 +113,8 @@ namespace DotNetWallet
 			if (command == "recover-wallet")
 			{
 				AssertArgumentsLenght(args.Length, 1, 2);
-				walletFileName = GetWalletFileName(args);
-				AssertWalletNotExists(walletFileName);
+				var walletFilePath = GetWalletFilePath(args);
+				AssertWalletNotExists(walletFilePath);
 
 				WriteLine($"Your software is configured using the Bitcoin {Config.Network} network.");
 				WriteLine("Provide your mnemonic words, separated by spaces:");
@@ -123,19 +124,19 @@ namespace DotNetWallet
 				WriteLine("Provide your password. Please note the wallet cannot check if your password is correct or not. If you provide a wrong password a wallet will be recovered with your provided mnemonic AND password pair:");
 				var password = PasswordConsole.ReadPassword();
 
-				Safe safe = Safe.Recover(mnemonic, password, walletFileName, Config.Network);
+				Safe safe = Safe.Recover(mnemonic, password, walletFilePath, Config.Network);
 				// If no exception thrown the wallet is successfully recovered.
 				WriteLine();
 				WriteLine("Wallet is successfully recovered.");
-				WriteLine($"Wallet file: {walletFileName}");
+				WriteLine($"Wallet file: {walletFilePath}");
 			}
 			#endregion
 			#region ShowBalancesCommand
 			if (command == "show-balances")
 			{
 				AssertArgumentsLenght(args.Length, 1, 2);
-				walletFileName = GetWalletFileName(args);
-				Safe safe = DecryptWalletByAskingForPassword(walletFileName);
+				var walletFilePath = GetWalletFilePath(args);
+				Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
 
 			}
 			#endregion
@@ -143,23 +144,23 @@ namespace DotNetWallet
 			if (command == "show-history")
 			{
 				AssertArgumentsLenght(args.Length, 1, 2);
-				walletFileName = GetWalletFileName(args);
-				Safe safe = DecryptWalletByAskingForPassword(walletFileName);
+				var walletFilePath = GetWalletFilePath(args);
+				Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
 			}
 			#endregion
 			#region ReceiveCommand
 			if (command == "receive")
 			{
 				AssertArgumentsLenght(args.Length, 1, 2);
-				walletFileName = GetWalletFileName(args);
-				Safe safe = DecryptWalletByAskingForPassword(walletFileName);
+				var walletFilePath = GetWalletFilePath(args);
+				Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
 			}
 			#endregion
 			#region SendCommand
 			if (command == "send")
 			{
 				AssertArgumentsLenght(args.Length, 3, 4);
-				walletFileName = GetWalletFileName(args);
+				var walletFilePath = GetWalletFilePath(args);
 				try
 				{
 					var amountToSend = new Money(GetAmountToSend(args), MoneyUnit.BTC);
@@ -171,14 +172,14 @@ namespace DotNetWallet
 					WriteLine(ex);
 					Exit();
 				}
-				Safe safe = DecryptWalletByAskingForPassword(walletFileName);
+				Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
 			}
 			#endregion
 
 			Exit();
 		}
 
-		private static Safe DecryptWalletByAskingForPassword(string walletFileName)
+		private static Safe DecryptWalletByAskingForPassword(string walletFilePath)
 		{
 			Safe safe = null;
 			string pw;
@@ -189,7 +190,7 @@ namespace DotNetWallet
 				pw = PasswordConsole.ReadPassword();
 				try
 				{
-					safe = Safe.Load(pw, walletFileName);
+					safe = Safe.Load(pw, walletFilePath);
 					AssertCorrectNetwork(safe.Network);
 					correctPw = true;
 				}
@@ -202,15 +203,14 @@ namespace DotNetWallet
 
 			if (safe == null)
 				throw new Exception("Wallet could not be decrypted.");
-			WriteLine("Wallet is decrypted.");
+			WriteLine($"{walletFilePath} wallet is decrypted.");
 			return safe;
 		}
-
-		public static void AssertWalletNotExists(string walletFileName)
+		public static void AssertWalletNotExists(string walletFilePath)
 		{
-			if(File.Exists(walletFileName))
+			if(File.Exists(walletFilePath))
 			{
-				WriteLine($"A wallet, named {walletFileName} already exists.");
+				WriteLine($"A wallet, named {walletFilePath} already exists.");
 				Exit();
 			}
 		}
@@ -269,14 +269,16 @@ namespace DotNetWallet
 			}
 			return amount;
 		}
-		private static string GetWalletFileName(string[] args)
+		private static string GetWalletFilePath(string[] args)
 		{
 			string walletFileName = Config.DefaultWalletFileName;
 
 			foreach (var arg in args)
 				if (arg.StartsWith("wallet-file=", StringComparison.OrdinalIgnoreCase))
 					walletFileName = arg.Substring(arg.IndexOf("=") + 1);
-			return walletFileName;
+			var walDirName = "Wallets";
+			Directory.CreateDirectory(walDirName);
+			return Path.Combine(walDirName, walletFileName);
 		}
 		// Inclusive
 		public static void AssertArgumentsLenght(int length, int min, int max)
