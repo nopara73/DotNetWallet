@@ -24,8 +24,6 @@ namespace DotNetWallet
 		};
 		#endregion
 
-		public const string DefaultWalletFileName = "Wallet.json";
-
 		public static void Main(string[] args)
 		{
 			args = new string[] { "send", "btc=3.2", "address=1F1tAaz5x1HUXrCNLbtMDqcw6o5GNn4xqX" };
@@ -51,7 +49,7 @@ namespace DotNetWallet
 			}
 			#endregion
 
-			var walletFileName = DefaultWalletFileName;
+			var walletFileName = Config.DefaultWalletFileName;
 
 			#region GenerateWalletCommand
 			if (command == "generate-wallet")
@@ -96,9 +94,8 @@ namespace DotNetWallet
 				try
 				{
 					var amountToSend = new Money(GetAmountToSend(args), MoneyUnit.BTC);
-
-					//todo check for expected network
-					var addressToSend = BitcoinAddress.Create(GetAddressToSend(args));
+					
+					var addressToSend = BitcoinAddress.Create(GetAddressToSend(args), Config.Network);
 				}
 				catch(Exception ex)
 				{
@@ -156,7 +153,7 @@ namespace DotNetWallet
 		}
 		private static string GetWalletFileName(string[] args)
 		{
-			string walletFileName = DefaultWalletFileName;
+			string walletFileName = Config.DefaultWalletFileName;
 
 			foreach (var arg in args)
 				if (arg.StartsWith("wallet-file=", StringComparison.OrdinalIgnoreCase))
