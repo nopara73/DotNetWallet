@@ -13,20 +13,17 @@ namespace DotNetWallet.KeyManagement
 		public Network Network => _network;
 		private ExtKey _seedPrivateKey;
 		public BitcoinExtPubKey SeedPublicKey => _seedPrivateKey.Neuter().GetWif(Network);
-		public BitcoinAddress GetAddress(int index)
+		public BitcoinAddress GetAddress(int index, HdPathType hdPathType = HdPathType.Normal)
 		{
-			var startPath = NormalHdPath;
-
-			var keyPath = new KeyPath(startPath + "/" + index);
-			return _seedPrivateKey.Derive(keyPath).ScriptPubKey.GetDestinationAddress(Network);
+			return GetPrivateKey(index, hdPathType).ScriptPubKey.GetDestinationAddress(Network);
 		}
-		public HashSet<BitcoinAddress>  GetFirstNAddresses(int addressCount)
+		public HashSet<BitcoinAddress>  GetFirstNAddresses(int addressCount, HdPathType hdPathType = HdPathType.Normal)
 		{
 			var addresses = new HashSet<BitcoinAddress>();			
 
 			for (var i = 0; i < addressCount; i++)
 			{
-				addresses.Add(GetAddress(i));
+				addresses.Add(GetAddress(i, hdPathType));
 			}
 
 			return addresses;
@@ -148,6 +145,39 @@ namespace DotNetWallet.KeyManagement
 		#region Hierarchy
 		private const string StealthPath = "0'";
 		private const string NormalHdPath = "1'";
+		private const string ChangeHdPath = "2'";
+		
+		public enum HdPathType
+		{
+			Normal,
+			Change
+		}
 		#endregion
+
+		internal BitcoinExtKey GetPrivateKey(BitcoinAddress address, int stopSearchAfterIteration = 100000, HdPathType hdPathType = HdPathType.Normal)
+		{
+			for(int i = 0; i < stopSearchAfterIteration; i++)
+			{
+				if (GetAddress(i, hdPathType) == address)
+					return GetPrivateKey(i, hdPathType);
+			}
+			throw new Exception("Bitcoin address not found.");
+		}
+		internal BitcoinExtKey GetPrivateKey(int index, HdPathType hdPathType = HdPathType.Normal)
+		{
+			string startPath;
+			if (hdPathType == HdPathType.Normal)
+			{
+				startPath = NormalHdPath;
+			}
+			else if (hdPathType == HdPathType.Change)
+			{
+				startPath = ChangeHdPath;
+			}
+			else throw new Exception("HdPathType not exists");
+
+			var keyPath = new KeyPath(startPath + "/" + index);
+			return _seedPrivateKey.Derive(keyPath).GetWif(_network);
+		}
 	}
 }

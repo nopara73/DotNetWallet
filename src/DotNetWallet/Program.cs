@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using static DotNetWallet.KeyManagement.Safe;
 using static System.Console;
 
 namespace DotNetWallet
@@ -186,7 +187,6 @@ namespace DotNetWallet
 				}
 				else if(Config.ConnectionType == ConnectionType.FullNode)
 				{
-					//todo
 					throw new NotImplementedException();
 				}
 				else
@@ -205,16 +205,16 @@ namespace DotNetWallet
 
 				if (Config.ConnectionType == ConnectionType.Http)
 				{
-					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery);
-					
+					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe);
+
 					WriteLine();
 					WriteLine("---------------------------------------------------------------------------");
 					WriteLine("Date\t\t\tAmount\t\tConfirmed\tTransaction Id");
 					WriteLine("---------------------------------------------------------------------------");
-					
+
 					HashSet<BalanceOperation> opSet = new HashSet<BalanceOperation>();
 					foreach (var elem in operationsPerAddresses)
-						foreach(var op in elem.Value)
+						foreach (var op in elem.Value)
 							opSet.Add(op);
 
 					if (opSet.Count() == 0)
@@ -230,7 +230,7 @@ namespace DotNetWallet
 					{
 						if (op.Amount > 0)
 							ForegroundColor = ConsoleColor.Green;
-						else if(op.Amount < 0)
+						else if (op.Amount < 0)
 							ForegroundColor = ConsoleColor.Red;
 
 						WriteLine($"{op.FirstSeen.DateTime}\t{op.Amount}\t{op.Confirmations > 0}\t\t{op.TransactionId}");
@@ -241,7 +241,6 @@ namespace DotNetWallet
 				}
 				else if (Config.ConnectionType == ConnectionType.FullNode)
 				{
-					//todo
 					throw new NotImplementedException();
 				}
 				else
@@ -260,13 +259,13 @@ namespace DotNetWallet
 
 				if (Config.ConnectionType == ConnectionType.Http)
 				{
-					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery);
+					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerNormalAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Normal);
 
 					WriteLine();
 					WriteLine("---------------------------------------------------------------------------");
 					WriteLine("Unused Receive Addresses");
 					WriteLine("---------------------------------------------------------------------------");
-					foreach (var elem in operationsPerAddresses)
+					foreach (var elem in operationsPerNormalAddresses)
 					{
 						if(elem.Value.Count == 0)
 							WriteLine($"{elem.Key.ToWif()}");
@@ -275,7 +274,6 @@ namespace DotNetWallet
 				}
 				else if (Config.ConnectionType == ConnectionType.FullNode)
 				{
-					//todo
 					throw new NotImplementedException();
 				}
 				else
@@ -292,8 +290,7 @@ namespace DotNetWallet
 				var walletFilePath = GetWalletFilePath(args);
 				try
 				{
-					var amountToSend = new Money(GetAmountToSend(args), MoneyUnit.BTC);
-					
+					var amountToSend = new Money(GetAmountToSend(args), MoneyUnit.BTC);					
 					var addressToSend = BitcoinAddress.Create(GetAddressToSend(args), Config.Network);
 				}
 				catch(Exception ex)
@@ -305,11 +302,33 @@ namespace DotNetWallet
 
 				if (Config.ConnectionType == ConnectionType.Http)
 				{
-					//todo
+					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery);
+
+					// 1. Gather all the not empty private keys
+					WriteLine("Finding not empty private keys...");
+					var operationsPerNotEmptyPrivateKeys = new Dictionary<BitcoinExtKey, List<BalanceOperation>>();
+					foreach (var elem in operationsPerAddresses)
+					{
+						var balance = Money.Zero;
+						foreach (var op in elem.Value) balance += op.Amount;
+						if (balance > Money.Zero)
+						{
+							var secret = safe.GetPrivateKey(elem.Key);
+							operationsPerNotEmptyPrivateKeys.Add(secret, elem.Value);
+						}
+					}
+
+					// 2. Get the script pubkey of the change.
+					Script scriptPubKey;
+					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerChangeAddresses = QueryOperationsPerSafeAddresses(safe, minUnusedKeys: 1, hdPathType: HdPathType.Change);
+					foreach (var elem in operationsPerChangeAddresses)
+					{
+						if (elem.Value.Count == 0)
+							scriptPubKey = safe.GetPrivateKey(elem.Key, hdPathType: HdPathType.Change).ScriptPubKey;
+					}
 				}
 				else if (Config.ConnectionType == ConnectionType.FullNode)
 				{
-					//todo
 					throw new NotImplementedException();
 				}
 				else
@@ -323,9 +342,22 @@ namespace DotNetWallet
 			Exit();
 		}
 
-		private static Dictionary<BitcoinAddress, List<BalanceOperation>> QueryOperationsPerSafeAddresses(Safe safe, int minUnusedKeys = 7)
+		private static Dictionary<BitcoinAddress, List<BalanceOperation>> QueryOperationsPerSafeAddresses(Safe safe, int minUnusedKeys = 7, HdPathType? hdPathType = null)
 		{
-			var addresses = safe.GetFirstNAddresses(minUnusedKeys);
+			if(hdPathType == null)
+			{
+				Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerNormalAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Normal);
+				Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerChangeAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Change);
+
+				var operationsPerAllAddresses = new Dictionary<BitcoinAddress, List<BalanceOperation>>();
+				foreach (var elem in operationsPerNormalAddresses)
+					operationsPerAllAddresses.Add(elem.Key, elem.Value);
+				foreach (var elem in operationsPerChangeAddresses)
+					operationsPerAllAddresses.Add(elem.Key, elem.Value);
+				return operationsPerAllAddresses;
+			}
+
+			var addresses = safe.GetFirstNAddresses(minUnusedKeys, hdPathType.GetValueOrDefault());
 			//var addresses = FakeData.FakeSafe.GetFirstNAddresses(minUnusedKeys);
 
 			var operationsPerAddresses = new Dictionary<BitcoinAddress, List<BalanceOperation>>();
@@ -335,7 +367,7 @@ namespace DotNetWallet
 				operationsPerAddresses.Add(elem.Key, elem.Value);
 				if (elem.Value.Count == 0) unusedKeyCount++;
 			}
-			WriteLine($"{operationsPerAddresses.Count} keys are processed.");
+			WriteLine($"{operationsPerAddresses.Count} {hdPathType} keys are processed.");
 
 			var startIndex = minUnusedKeys;
 			while(unusedKeyCount < minUnusedKeys)
@@ -343,7 +375,7 @@ namespace DotNetWallet
 				addresses = new HashSet<BitcoinAddress>();
 				for(int i = startIndex; i < startIndex + minUnusedKeys; i++)
 				{
-					addresses.Add(safe.GetAddress(i));
+					addresses.Add(safe.GetAddress(i, hdPathType.GetValueOrDefault()));
 					//addresses.Add(FakeData.FakeSafe.GetAddress(i));
 				}
 				foreach (var elem in QueryOperationsPerAddresses(addresses))
@@ -351,7 +383,7 @@ namespace DotNetWallet
 					operationsPerAddresses.Add(elem.Key, elem.Value);
 					if (elem.Value.Count == 0) unusedKeyCount++;
 				}
-				WriteLine($"{operationsPerAddresses.Count} keys are processed.");
+				WriteLine($"{operationsPerAddresses.Count} {hdPathType} keys are processed.");
 				startIndex += minUnusedKeys;
 			}
 
