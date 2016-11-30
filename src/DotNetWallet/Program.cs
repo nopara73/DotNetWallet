@@ -1,6 +1,8 @@
 ﻿using DotNetWallet.Helpers;
 using DotNetWallet.KeyManagement;
 using NBitcoin;
+using QBitNinja.Client;
+using QBitNinja.Client.Models;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -25,16 +27,18 @@ namespace DotNetWallet
 		};
 		#endregion
 
+		public const int MinUnusedKeysToQuery = 7;
+
 		public static void Main(string[] args)
 		{
 			//args = new string[] { "help" };
 			//args = new string[] { "generate-wallet" };
-			//args = new string[] { "generate-wallet", "wallet-file=Wallet2.json" };
+			//args = new string[] { "generate-wallet", "wallet-file=Wallet4.json" };
 			////math super cool donate beach mobile sunny web board kingdom bacon crisp
 			////no password
 			//args = new string[] { "recover-wallet", "wallet-file=Wallet3.json" };
 			//args = new string[] { "show-balances" };
-			//args = new string[] { "show-balances", "wallet-file=Wallet3.json" };
+			args = new string[] { "receive" };
 
 			// Load config file
 			// It also creates it with default settings if doesn't exist
@@ -67,8 +71,7 @@ namespace DotNetWallet
 				AssertArgumentsLenght(args.Length, 1, 1);
 				DisplayHelp();
 			}
-			#endregion
-			
+			#endregion			
 			#region GenerateWalletCommand
 			if (command == "generate-wallet")
 			{
@@ -138,6 +141,37 @@ namespace DotNetWallet
 				var walletFilePath = GetWalletFilePath(args);
 				Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
 
+				if(Config.ConnectionType == ConnectionType.Http)
+				{
+					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery);
+
+					foreach(var elem in operationsPerAddresses)
+					{
+					}
+
+					WriteLine();
+					WriteLine("---------------------------------------------------------------------------");
+					WriteLine($"Confirmed Wallet Balance: {1}");
+					WriteLine($"Unconfirmed Wallet Balance: {1}");
+					WriteLine("---------------------------------------------------------------------------");
+					WriteLine("Address\t\t\t\t\tConfirmed\tUnconfirmed");
+					WriteLine("---------------------------------------------------------------------------");
+					foreach (var elem in operationsPerAddresses)
+					{
+						WriteLine($"{elem.Key.ToWif()}");
+					}
+
+				}
+				else if(Config.ConnectionType == ConnectionType.FullNode)
+				{
+					//todo
+					throw new NotImplementedException();
+				}
+				else
+				{
+					WriteLine("Invalid connection type.");
+					Exit();
+				}
 			}
 			#endregion
 			#region ShowHistoryCommand
@@ -146,6 +180,21 @@ namespace DotNetWallet
 				AssertArgumentsLenght(args.Length, 1, 2);
 				var walletFilePath = GetWalletFilePath(args);
 				Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
+
+				if (Config.ConnectionType == ConnectionType.Http)
+				{
+					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery);
+				}
+				else if (Config.ConnectionType == ConnectionType.FullNode)
+				{
+					//todo
+					throw new NotImplementedException();
+				}
+				else
+				{
+					WriteLine("Invalid connection type.");
+					Exit();
+				}
 			}
 			#endregion
 			#region ReceiveCommand
@@ -154,6 +203,32 @@ namespace DotNetWallet
 				AssertArgumentsLenght(args.Length, 1, 2);
 				var walletFilePath = GetWalletFilePath(args);
 				Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
+
+				if (Config.ConnectionType == ConnectionType.Http)
+				{
+					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery);
+
+					WriteLine();
+					WriteLine("---------------------------------------------------------------------------");
+					WriteLine("Unused Receive Addresses");
+					WriteLine("---------------------------------------------------------------------------");
+					foreach (var elem in operationsPerAddresses)
+					{
+						if(elem.Value.Count == 0)
+							WriteLine($"{elem.Key.ToWif()}");
+					}
+					WriteLine();
+				}
+				else if (Config.ConnectionType == ConnectionType.FullNode)
+				{
+					//todo
+					throw new NotImplementedException();
+				}
+				else
+				{
+					WriteLine("Invalid connection type.");
+					Exit();
+				}
 			}
 			#endregion
 			#region SendCommand
@@ -173,12 +248,69 @@ namespace DotNetWallet
 					Exit();
 				}
 				Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
+
+				if (Config.ConnectionType == ConnectionType.Http)
+				{
+					//todo
+				}
+				else if (Config.ConnectionType == ConnectionType.FullNode)
+				{
+					//todo
+					throw new NotImplementedException();
+				}
+				else
+				{
+					WriteLine("Invalid connection type.");
+					Exit();
+				}
 			}
 			#endregion
 
 			Exit();
 		}
 
+		private static Dictionary<BitcoinAddress, List<BalanceOperation>> QueryOperationsPerSafeAddresses(Safe safe, int minUnusedKeys = 7)
+		{
+			var addresses = safe.GetFirstNAddresses(minUnusedKeys);
+
+			var operationsPerAddresses = new Dictionary<BitcoinAddress, List<BalanceOperation>>();
+			var unusedKeyCount = 0;
+			foreach (var elem in QueryOperationsPerAddresses(addresses))
+			{
+				operationsPerAddresses.Add(elem.Key, elem.Value);
+				if (elem.Value.Count == 0) unusedKeyCount++;
+			}
+
+			var startIndex = minUnusedKeys;
+			while(unusedKeyCount < minUnusedKeys)
+			{
+				WriteLine($"{startIndex} keys are processed.");
+				addresses = new HashSet<BitcoinAddress>();
+				for(int i = startIndex; i < startIndex + minUnusedKeys; i++)
+				{
+					addresses.Add(safe.GetAddress(i));
+				}
+				foreach (var elem in QueryOperationsPerAddresses(addresses))
+				{
+					operationsPerAddresses.Add(elem.Key, elem.Value);
+					if (elem.Value.Count == 0) unusedKeyCount++;
+				}
+				startIndex += minUnusedKeys;
+			}
+
+			return operationsPerAddresses;
+		}
+		private static Dictionary<BitcoinAddress, List<BalanceOperation>> QueryOperationsPerAddresses(HashSet<BitcoinAddress> addresses)
+		{
+			var operationsPerAddresses = new Dictionary<BitcoinAddress, List<BalanceOperation>>();
+			var client = new QBitNinjaClient(Config.Network);
+			foreach (var addr in addresses)
+			{
+				var operations = client.GetBalance(addr, unspentOnly: false).Result.Operations;
+				operationsPerAddresses.Add(addr, operations);
+			}
+			return operationsPerAddresses;
+		}
 		private static Safe DecryptWalletByAskingForPassword(string walletFilePath)
 		{
 			Safe safe = null;

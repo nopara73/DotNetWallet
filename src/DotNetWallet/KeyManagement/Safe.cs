@@ -12,6 +12,32 @@ namespace DotNetWallet.KeyManagement
 		private Network _network;
 		public Network Network => _network;
 		private ExtKey _seedPrivateKey;
+		public BitcoinExtPubKey SeedPublicKey => _seedPrivateKey.Neuter().GetWif(Network);
+		public BitcoinAddress GetAddress(int index)
+		{
+			var startPath = NormalHdPath;
+
+			var keyPath = new KeyPath(startPath + "/" + index);
+			return _seedPrivateKey.Derive(keyPath).ScriptPubKey.GetDestinationAddress(Network);
+		}
+		public HashSet<BitcoinAddress>  GetFirstNAddresses(int addressCount)
+		{
+
+			var addresses = new HashSet<BitcoinAddress>();			
+
+			for (var i = 0; i < addressCount; i++)
+			{
+				addresses.Add(GetAddress(i));
+			}
+
+			return addresses;
+		}
+
+		// Let's generate the walletname from seedpublickey
+		// Let's get the pubkey, so the chaincode is lost
+		// Let's get the address, you can't directly access it from the safe
+		// Also nobody would ever use this address for anything
+		public string UniqueId => SeedPublicKey.ExtPubKey.PubKey.GetAddress(Network).ToWif();		
 
 		public string WalletFilePath { get; }
 
@@ -120,5 +146,9 @@ namespace DotNetWallet.KeyManagement
 
 			return safe;
 		}
+		#region Hierarchy
+		private const string StealthPath = "0'";
+		private const string NormalHdPath = "1'";
+		#endregion
 	}
 }
