@@ -38,7 +38,8 @@ namespace DotNetWallet
 			////no password
 			//args = new string[] { "recover-wallet", "wallet-file=Wallet3.json" };
 			//args = new string[] { "show-balances" };
-			args = new string[] { "receive" };
+			//args = new string[] { "receive" };
+			args = new string[] { "show-history" };
 
 			// Load config file
 			// It also creates it with default settings if doesn't exist
@@ -184,6 +185,32 @@ namespace DotNetWallet
 				if (Config.ConnectionType == ConnectionType.Http)
 				{
 					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery);
+					
+					WriteLine();
+					WriteLine("---------------------------------------------------------------------------");
+					WriteLine("Date\t\t\tAmount\t\tConfirmed\tTransaction Id");
+					WriteLine("---------------------------------------------------------------------------");
+					
+					HashSet<BalanceOperation> opSet = new HashSet<BalanceOperation>();
+					foreach (var elem in operationsPerAddresses)
+						foreach(var op in elem.Value)
+							opSet.Add(op);
+
+					var opList = opSet.ToList().OrderBy(x => x.FirstSeen);
+					foreach (var op in opList)
+					{
+						if (op.Amount > 0)
+							ForegroundColor = ConsoleColor.Green;
+						else if(op.Amount < 0)
+							ForegroundColor = ConsoleColor.Red;
+
+						WriteLine($"{op.FirstSeen.DateTime}\t{op.Amount}\t{op.Confirmations > 0}\t\t{op.TransactionId}");
+
+						ResetColor();
+					}
+					if (opList.Count() == 0)
+						WriteLine("Wallet has no history yet.");
+					WriteLine();
 				}
 				else if (Config.ConnectionType == ConnectionType.FullNode)
 				{
@@ -272,6 +299,7 @@ namespace DotNetWallet
 		private static Dictionary<BitcoinAddress, List<BalanceOperation>> QueryOperationsPerSafeAddresses(Safe safe, int minUnusedKeys = 7)
 		{
 			var addresses = safe.GetFirstNAddresses(minUnusedKeys);
+			//var addresses = FakeData.FakeSafe.GetFirstNAddresses(minUnusedKeys);
 
 			var operationsPerAddresses = new Dictionary<BitcoinAddress, List<BalanceOperation>>();
 			var unusedKeyCount = 0;
@@ -280,21 +308,23 @@ namespace DotNetWallet
 				operationsPerAddresses.Add(elem.Key, elem.Value);
 				if (elem.Value.Count == 0) unusedKeyCount++;
 			}
+			WriteLine($"{operationsPerAddresses.Count} keys are processed.");
 
 			var startIndex = minUnusedKeys;
 			while(unusedKeyCount < minUnusedKeys)
 			{
-				WriteLine($"{startIndex} keys are processed.");
 				addresses = new HashSet<BitcoinAddress>();
 				for(int i = startIndex; i < startIndex + minUnusedKeys; i++)
 				{
 					addresses.Add(safe.GetAddress(i));
+					//addresses.Add(FakeData.FakeSafe.GetAddress(i));
 				}
 				foreach (var elem in QueryOperationsPerAddresses(addresses))
 				{
 					operationsPerAddresses.Add(elem.Key, elem.Value);
 					if (elem.Value.Count == 0) unusedKeyCount++;
 				}
+				WriteLine($"{operationsPerAddresses.Count} keys are processed.");
 				startIndex += minUnusedKeys;
 			}
 

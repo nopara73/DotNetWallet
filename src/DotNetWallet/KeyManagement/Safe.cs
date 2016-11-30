@@ -22,7 +22,6 @@ namespace DotNetWallet.KeyManagement
 		}
 		public HashSet<BitcoinAddress>  GetFirstNAddresses(int addressCount)
 		{
-
 			var addresses = new HashSet<BitcoinAddress>();			
 
 			for (var i = 0; i < addressCount; i++)
