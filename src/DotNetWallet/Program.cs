@@ -37,9 +37,9 @@ namespace DotNetWallet
 			////math super cool donate beach mobile sunny web board kingdom bacon crisp
 			////no password
 			//args = new string[] { "recover-wallet", "wallet-file=Wallet3.json" };
-			//args = new string[] { "show-balances" };
+			args = new string[] { "show-balances" };
 			//args = new string[] { "receive" };
-			args = new string[] { "show-history" };
+			//args = new string[] { "show-history" };
 
 			// Load config file
 			// It also creates it with default settings if doesn't exist
@@ -145,22 +145,43 @@ namespace DotNetWallet
 				if(Config.ConnectionType == ConnectionType.Http)
 				{
 					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery);
-
-					foreach(var elem in operationsPerAddresses)
-					{
-					}
-
-					WriteLine();
-					WriteLine("---------------------------------------------------------------------------");
-					WriteLine($"Confirmed Wallet Balance: {1}");
-					WriteLine($"Unconfirmed Wallet Balance: {1}");
+					
+					WriteLine();					
 					WriteLine("---------------------------------------------------------------------------");
 					WriteLine("Address\t\t\t\t\tConfirmed\tUnconfirmed");
 					WriteLine("---------------------------------------------------------------------------");
+					var confirmedWallBalance = Money.Zero;
+					var unconfirmedWallBalance = Money.Zero;
 					foreach (var elem in operationsPerAddresses)
 					{
-						WriteLine($"{elem.Key.ToWif()}");
+						List<BalanceOperation> operations = elem.Value;
+
+						var confirmedAddrBalance = Money.Zero;
+						var unconfirmedAddrBalance = Money.Zero;
+						
+						foreach (var op in operations)
+						{
+							if (op.Confirmations > 0)
+							{
+								confirmedAddrBalance += op.Amount;
+							}
+							else
+							{
+								unconfirmedAddrBalance += op.Amount;
+							}
+						}
+						confirmedWallBalance += confirmedAddrBalance;
+						unconfirmedWallBalance += unconfirmedAddrBalance;
+
+						if(confirmedAddrBalance != Money.Zero || unconfirmedAddrBalance != Money.Zero)
+							WriteLine($"{elem.Key.ToWif()}\t{confirmedAddrBalance}\t{unconfirmedAddrBalance}");
 					}
+					WriteLine();
+					WriteLine("---------------------------------------------------------------------------");
+					WriteLine($"Confirmed Wallet Balance: {confirmedWallBalance}");
+					WriteLine($"Unconfirmed Wallet Balance: {unconfirmedWallBalance}");
+					WriteLine("---------------------------------------------------------------------------");
+					WriteLine();
 
 				}
 				else if(Config.ConnectionType == ConnectionType.FullNode)
@@ -196,7 +217,15 @@ namespace DotNetWallet
 						foreach(var op in elem.Value)
 							opSet.Add(op);
 
-					var opList = opSet.ToList().OrderBy(x => x.FirstSeen);
+					if (opSet.Count() == 0)
+					{
+						WriteLine("Wallet has no history yet.");
+						Exit();
+					}
+
+					var opList = opSet.ToList()
+						.OrderByDescending(x => x.Confirmations)
+						.ThenBy(x => x.FirstSeen);
 					foreach (var op in opList)
 					{
 						if (op.Amount > 0)
@@ -208,8 +237,6 @@ namespace DotNetWallet
 
 						ResetColor();
 					}
-					if (opList.Count() == 0)
-						WriteLine("Wallet has no history yet.");
 					WriteLine();
 				}
 				else if (Config.ConnectionType == ConnectionType.FullNode)
