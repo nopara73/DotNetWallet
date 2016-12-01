@@ -1,10 +1,19 @@
 # DotNetWallet
 Bitcoin wallet implementation in .NET Core.  
+The wallet is aimed to be a dedicated wallet for a Bitcoin privacy improvement technique, called [TumbleBit](https://github.com/BUSEC/TumbleBit). TumbleBit will be integrated through [NTumbleBit](https://github.com/NTumbleBit/NTumbleBit).  
+  
+The wallet can communicate with the network through HTTP API and soon as a full node.  
+Right now it has a Command Line Interface. Gui will come later.  
+  
+##How to use it
+### Quickstart
+The development is at early stages. You have to clone and build it yourself. See the developer documentation/tutorial on CodeProject: [Build a Bitcoin wallet in C#](https://www.codeproject.com/script/Articles/ArticleVersion.aspx?waid=214550&aid=1115639)    
+  
+The app is cross-platform, you can try it in any OS. You only need for it [dotnet core](https://www.microsoft.com/net/core).
 
-See the documentation on CodeProject: [Build a Bitcoin wallet in C#](https://www.codeproject.com/script/Articles/ArticleVersion.aspx?waid=214550&aid=1115639)  
+Run the app once. It will generate 
 
-##Usage  
-First time running the app it will generate the `Config.json` for you:  
+Run the app. The first time it will generate a `Config.json` for you.
 
 ```
 {
