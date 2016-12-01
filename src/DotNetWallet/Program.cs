@@ -1,6 +1,7 @@
 ﻿using DotNetWallet.Helpers;
 using DotNetWallet.KeyManagement;
 using NBitcoin;
+using Newtonsoft.Json.Linq;
 using QBitNinja.Client;
 using QBitNinja.Client.Models;
 using System;
@@ -8,6 +9,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Threading;
 using static DotNetWallet.KeyManagement.Safe;
 using static System.Console;
 
@@ -34,13 +37,15 @@ namespace DotNetWallet
 		{
 			//args = new string[] { "help" };
 			//args = new string[] { "generate-wallet" };
-			//args = new string[] { "generate-wallet", "wallet-file=Wallet4.json" };
+			//args = new string[] { "generate-wallet", "wallet-file=test.json" };
 			////math super cool donate beach mobile sunny web board kingdom bacon crisp
 			////no password
 			//args = new string[] { "recover-wallet", "wallet-file=Wallet3.json" };
-			//args = new string[] { "show-balances" };
-			//args = new string[] { "receive" };
-			//args = new string[] { "show-history" };
+			//args = new string[] { "show-balances", "wallet-file=test.json" };
+			//args = new string[] { "receive", "wallet-file=test.json" };
+			//args = new string[] { "show-history", "wallet-file=test.json" };
+			//args = new string[] { "send", "btc=0.001", "address=mq6fK8fkFyCy9p53m4Gf4fiX2XCHvcwgi1", "wallet-file=test.json" };
+			//args = new string[] { "send", "btc=all", "address=mzKvnpSsrjBXmNngo3t5w7abR5tTWE7Z9V", "wallet-file=test.json" };
 
 			// Load config file
 			// It also creates it with default settings if doesn't exist
@@ -48,9 +53,8 @@ namespace DotNetWallet
 
 			if (args.Length == 0)
 			{
-				WriteLine("No command is specified.");
 				DisplayHelp();
-				Exit();
+				Exit(color: ConsoleColor.Green);
 			}
 			var command = args[0];
 			if (!Commands.Contains(command))
@@ -62,8 +66,7 @@ namespace DotNetWallet
 			{
 				if(!arg.Contains('='))
 				{
-					WriteLine($"Wrong argument format specified: {arg}");
-					Exit();
+					Exit($"Wrong argument format specified: {arg}");
 				}
 			}
 
@@ -191,8 +194,7 @@ namespace DotNetWallet
 				}
 				else
 				{
-					WriteLine("Invalid connection type.");
-					Exit();
+					Exit("Invalid connection type.");
 				}
 			}
 			#endregion
@@ -219,8 +221,7 @@ namespace DotNetWallet
 
 					if (opSet.Count() == 0)
 					{
-						WriteLine("Wallet has no history yet.");
-						Exit();
+						Exit("Wallet has no history yet.");
 					}
 
 					var opList = opSet.ToList()
@@ -245,8 +246,7 @@ namespace DotNetWallet
 				}
 				else
 				{
-					WriteLine("Invalid connection type.");
-					Exit();
+					Exit("Invalid connection type.");
 				}
 			}
 			#endregion
@@ -278,8 +278,7 @@ namespace DotNetWallet
 				}
 				else
 				{
-					WriteLine("Invalid connection type.");
-					Exit();
+					Exit("Invalid connection type.");
 				}
 			}
 			#endregion
@@ -288,15 +287,15 @@ namespace DotNetWallet
 			{
 				AssertArgumentsLenght(args.Length, 3, 4);
 				var walletFilePath = GetWalletFilePath(args);
+				BitcoinAddress addressToSend;
 				try
-				{
-					var amountToSend = new Money(GetAmountToSend(args), MoneyUnit.BTC);					
-					var addressToSend = BitcoinAddress.Create(GetAddressToSend(args), Config.Network);
+				{			
+					addressToSend = BitcoinAddress.Create(GetArgumentValue(args, argName: "address", required: true), Config.Network);
 				}
 				catch(Exception ex)
 				{
-					WriteLine(ex);
-					Exit();
+					Exit(ex.ToString());
+					throw ex;
 				}
 				Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
 
@@ -319,13 +318,177 @@ namespace DotNetWallet
 					}
 
 					// 2. Get the script pubkey of the change.
-					Script scriptPubKey;
+					WriteLine("Select change address...");
+					Script changeScriptPubKey = null;
 					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerChangeAddresses = QueryOperationsPerSafeAddresses(safe, minUnusedKeys: 1, hdPathType: HdPathType.Change);
 					foreach (var elem in operationsPerChangeAddresses)
 					{
 						if (elem.Value.Count == 0)
-							scriptPubKey = safe.GetPrivateKey(elem.Key, hdPathType: HdPathType.Change).ScriptPubKey;
+							changeScriptPubKey = safe.GetPrivateKey(elem.Key, hdPathType: HdPathType.Change).ScriptPubKey;
 					}
+					if (changeScriptPubKey == null)
+						throw new ArgumentNullException();
+
+					// 3. Gather coins can be spend
+					WriteLine("Gathering unspent coins...");
+					Dictionary<Coin, bool> unspentCoins = GetUnspentCoins(operationsPerNotEmptyPrivateKeys.Keys);
+
+					// 4. Get the fee
+					WriteLine("Calculating transaction fee...");
+					Money fee;
+					try
+					{
+						var txSizeInBytes = 250;
+						using (var client = new HttpClient())
+						{
+
+							const string request = @"https://bitcoinfees.21.co/api/v1/fees/recommended";
+							var result = client.GetAsync(request, HttpCompletionOption.ResponseContentRead).Result;
+							var json = JObject.Parse(result.Content.ReadAsStringAsync().Result);
+							var fastestSatoshiPerByteFee = json.Value<decimal>("fastestFee");
+							fee = new Money(fastestSatoshiPerByteFee * txSizeInBytes, MoneyUnit.Satoshi);
+						}
+					}
+					catch
+					{
+						Exit("Couldn't calculate transaction fee, try it again later.");
+						throw new Exception("Can't get tx fee");
+					}
+					WriteLine($"Fee: {fee.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}btc");
+
+					// 5. How much money we can spend?
+					Money availableAmount = Money.Zero;
+					Money unconfirmedAvailableAmount = Money.Zero;
+					foreach (var elem in unspentCoins)
+					{
+						// If can spend unconfirmed add all
+						if (Config.CanSpendUnconfirmed)
+						{
+							availableAmount += elem.Key.Amount;
+							if(!elem.Value)
+								unconfirmedAvailableAmount += elem.Key.Amount;
+						}
+						// else only add confirmed ones
+						else
+						{
+							if (elem.Value)
+							{
+								availableAmount += elem.Key.Amount;
+							}
+						}
+					}
+
+					// 6. How much to spend?
+					Money amountToSend = null;
+					string amountString = GetArgumentValue(args, argName: "btc", required: true);
+					if (string.Equals(amountString, "all", StringComparison.OrdinalIgnoreCase))
+					{
+						amountToSend = availableAmount;
+						amountToSend -= fee;
+					}
+					else
+					{
+						amountToSend = ParseBtcString(amountString);
+					}
+
+					// 7. Do some checks
+					if (amountToSend < Money.Zero || availableAmount < amountToSend + fee)
+						Exit("Not enough coins.");
+
+					decimal feePc = Math.Round((100 * fee.ToDecimal(MoneyUnit.BTC)) / amountToSend.ToDecimal(MoneyUnit.BTC));
+					if (feePc > 1)
+					{
+						WriteLine();
+						WriteLine($"The transaction fee is {feePc.ToString("0.#")}% of your transaction amount.");
+						WriteLine($"Sending:\t {amountToSend.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}btc");
+						WriteLine($"Fee:\t\t {fee.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}btc");
+						ConsoleKey response = GetYesNoAnswerFromUser();
+						if (response == ConsoleKey.N)
+						{
+							Exit("User interruption.");
+						}
+					}
+
+					var confirmedAvailableAmount = availableAmount - unconfirmedAvailableAmount;
+					var totalOutAmount = amountToSend + fee;
+					if (confirmedAvailableAmount < totalOutAmount)
+					{
+						var unconfirmedToSend = totalOutAmount - confirmedAvailableAmount;
+						WriteLine();
+						WriteLine($"In order to complete this transaction you have to spend {unconfirmedToSend.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")} unconfirmed btc.");
+						ConsoleKey response = GetYesNoAnswerFromUser();
+						if (response == ConsoleKey.N)
+						{
+							Exit("User interruption.");
+						}
+					}
+
+					// 8. Select coins
+					WriteLine("Selecting coins...");
+					var coinsToSpend = new HashSet<Coin>();
+					var unspentConfirmedCoins = new List<Coin>();
+					var unspentUnconfirmedCoins = new List<Coin>();
+					foreach (var elem in unspentCoins)
+						if (elem.Value) unspentConfirmedCoins.Add(elem.Key);
+						else unspentUnconfirmedCoins.Add(elem.Key);
+
+					bool haveEnough = SelectCoins(ref coinsToSpend, totalOutAmount, unspentConfirmedCoins);
+					if (!haveEnough)
+						haveEnough = SelectCoins(ref coinsToSpend, totalOutAmount, unspentUnconfirmedCoins);
+					if (!haveEnough)
+						throw new Exception("Not enough funds.");
+
+					// 9. Get signing keys
+					var signingKeys = new HashSet<ISecret>();
+					foreach(var coin in coinsToSpend)
+					{
+						foreach(var elem in operationsPerNotEmptyPrivateKeys)
+						{
+							if (elem.Key.ScriptPubKey == coin.ScriptPubKey)
+								signingKeys.Add(elem.Key);
+						}
+					}
+
+					// 10. Build the transaction
+					WriteLine("Signing transaction...");
+					var builder = new TransactionBuilder();
+					var tx = builder
+						.AddCoins(coinsToSpend)
+						.AddKeys(signingKeys.ToArray())
+						.Send(addressToSend, amountToSend)
+						.SetChange(changeScriptPubKey)
+						.SendFees(fee)
+						.BuildTransaction(true);
+
+					if (!builder.Verify(tx))
+						Exit("Couldn't build the transaction.");
+					
+					WriteLine($"Transaction Id: {tx.GetHash()}");
+
+					WriteLine("Broadcasting transaction...");
+					var qBitClient = new QBitNinjaClient(Config.Network);
+					var broadcastResponse = qBitClient.Broadcast(tx).Result;
+
+					if(broadcastResponse.Error != null)
+					{
+						Exit($"Error code: {broadcastResponse.Error.ErrorCode} Reason: {broadcastResponse.Error.Reason}");
+					}
+					if (!broadcastResponse.Success)
+					{
+						Exit("Couldn't broadcast the transaction.");
+					}
+					// QBit's succes response is buggy so let's check manually, too
+					var getTxResp = qBitClient.GetTransaction(tx.GetHash()).Result;
+					if(getTxResp == null)
+					{
+						Thread.Sleep(3000);
+						getTxResp = qBitClient.GetTransaction(tx.GetHash()).Result;
+					}
+					if(getTxResp == null)
+						Exit("Couldn't broadcast the transaction.");
+
+					WriteLine();
+					WriteLine("Transaction is successfully propagated on the network.");
 				}
 				else if (Config.ConnectionType == ConnectionType.FullNode)
 				{
@@ -333,15 +496,56 @@ namespace DotNetWallet
 				}
 				else
 				{
-					WriteLine("Invalid connection type.");
-					Exit();
+					Exit("Invalid connection type.");
 				}
 			}
 			#endregion
 
-			Exit();
+			Exit(color: ConsoleColor.Green);
 		}
+		#region QBitNinjaJutsus
+		private static bool SelectCoins(ref HashSet<Coin> coinsToSpend, Money totalOutAmount, List<Coin> unspentCoins)
+		{
+			var haveEnough = false;
+			foreach (var coin in unspentCoins.OrderByDescending(x => x.Amount))
+			{
+				coinsToSpend.Add(coin);
+				// if doesn't reach amount, continue adding next coin
+				if (coinsToSpend.Sum(x => x.Amount) < totalOutAmount) continue;
+				else
+				{
+					haveEnough = true;
+					break;
+				}
+			}
 
+			return haveEnough;
+		}
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="secrets"></param>
+		/// <returns>dictionary with coins and if confirmed</returns>
+		private static Dictionary<Coin, bool> GetUnspentCoins(IEnumerable<ISecret> secrets)
+		{
+			var unspentCoins = new Dictionary<Coin, bool>();
+			foreach (var secret in secrets)
+			{
+				var destination = secret.PrivateKey.ScriptPubKey.GetDestinationAddress(Config.Network);
+
+				var client = new QBitNinjaClient(Config.Network);
+				var balanceModel = client.GetBalance(destination, unspentOnly: true).Result;
+				foreach (var operation in balanceModel.Operations)
+				{
+					foreach(var elem in operation.ReceivedCoins.Select(coin => coin as Coin))
+					{
+						unspentCoins.Add(elem, operation.Confirmations > 0);
+					}
+				}
+			}
+
+			return unspentCoins;
+		}
 		private static Dictionary<BitcoinAddress, List<BalanceOperation>> QueryOperationsPerSafeAddresses(Safe safe, int minUnusedKeys = 7, HdPathType? hdPathType = null)
 		{
 			if(hdPathType == null)
@@ -400,6 +604,78 @@ namespace DotNetWallet
 			}
 			return operationsPerAddresses;
 		}
+		#endregion				
+		#region Assertions
+		public static void AssertWalletNotExists(string walletFilePath)
+		{
+			if (File.Exists(walletFilePath))
+			{
+				Exit($"A wallet, named {walletFilePath} already exists.");
+			}
+		}
+		public static void AssertCorrectNetwork(Network network)
+		{
+			if (network != Config.Network)
+			{
+				WriteLine($"The wallet you want to load is on the {network} Bitcoin network.");
+				WriteLine($"But your config file specifies {Config.Network} Bitcoin network.");
+				Exit();
+			}
+		}
+		public static void AssertCorrectMnemonicFormat(string mnemonic)
+		{
+			try
+			{
+				if (new Mnemonic(mnemonic).IsValidChecksum)
+					return;
+			}
+			catch (FormatException) { }
+			catch (NotSupportedException) { }
+			
+			Exit("Incorrect mnemonic format.");
+		}
+		// Inclusive
+		public static void AssertArgumentsLenght(int length, int min, int max)
+		{
+			if(length < min)
+			{
+				Exit($"Not enough arguments are specified, minimum: {min}");
+			}
+			if(length > max)
+			{
+				Exit($"Too many arguments are specified, maximum: {max}");
+			}
+		}
+		#endregion
+		#region CommandLineArgumentStuff
+		private static string GetArgumentValue(string[] args, string argName, bool required = true)
+		{
+			string argValue = "";
+			foreach (var arg in args)
+			{
+				if (arg.StartsWith($"{argName}=", StringComparison.OrdinalIgnoreCase))
+				{
+					argValue = arg.Substring(arg.IndexOf("=") + 1);
+					break;
+				}
+			}
+			if (required && argValue == "")
+			{
+				Exit($@"'{argName}=' is not specified.");
+			}
+			return argValue;
+		}
+		private static string GetWalletFilePath(string[] args)
+		{
+			string walletFileName = GetArgumentValue(args, "wallet-file", required: false);
+			if (walletFileName == "") walletFileName = Config.DefaultWalletFileName;
+
+			var walletDirName = "Wallets";
+			Directory.CreateDirectory(walletDirName);
+			return Path.Combine(walletDirName, walletFileName);
+		}
+		#endregion
+		#region CommandLineInterface
 		private static Safe DecryptWalletByAskingForPassword(string walletFilePath)
 		{
 			Safe safe = null;
@@ -427,104 +703,50 @@ namespace DotNetWallet
 			WriteLine($"{walletFilePath} wallet is decrypted.");
 			return safe;
 		}
-		public static void AssertWalletNotExists(string walletFilePath)
+		private static ConsoleKey GetYesNoAnswerFromUser()
 		{
-			if(File.Exists(walletFilePath))
+			ConsoleKey response;
+			do
 			{
-				WriteLine($"A wallet, named {walletFilePath} already exists.");
-				Exit();
-			}
-		}
-		public static void AssertCorrectNetwork(Network network)
-		{
-			if(network != Config.Network)
-			{
-				WriteLine($"The wallet you want to load is on the {network} Bitcoin network.");
-				WriteLine($"But your config file specifies {Config.Network} Bitcoin network.");
-			}
-		}
-		public static void AssertCorrectMnemonicFormat(string mnemonic)
-		{
-			try
-			{
-				if (new Mnemonic(mnemonic).IsValidChecksum)
-					return;
-			}
-			catch (FormatException) { }
-			catch (NotSupportedException) { }
-
-			WriteLine("Incorrect mnemonic format.");
-			Exit();
-		}
-		private static string GetAddressToSend(string[] args)
-		{
-			string address = "";
-			foreach (var arg in args)
-				if (arg.StartsWith("address=", StringComparison.OrdinalIgnoreCase))
-					address = arg.Substring(arg.IndexOf("=") + 1);
-			if (address == "")
-			{
-				WriteLine(@"'address=' is not specified.");
-				Exit();
-			}
-			return address;
-		}
-		private static decimal GetAmountToSend(string[] args)
-		{
-			decimal amount = -1m;
-			foreach (var arg in args)
-				if (arg.StartsWith("btc=", StringComparison.OrdinalIgnoreCase))
-					if (!decimal.TryParse(
-						arg.Substring(arg.IndexOf("=") + 1).Replace(',', '.'),
-						NumberStyles.Any,
-						CultureInfo.InvariantCulture,
-						out amount))
-					{
-						WriteLine("Wrong btc amount format.");
-						Exit();
-					}
-			if(amount == -1m)
-			{
-				WriteLine(@"'btc=' is not specified.");
-				Exit();
-			}
-			return amount;
-		}
-		private static string GetWalletFilePath(string[] args)
-		{
-			string walletFileName = Config.DefaultWalletFileName;
-
-			foreach (var arg in args)
-				if (arg.StartsWith("wallet-file=", StringComparison.OrdinalIgnoreCase))
-					walletFileName = arg.Substring(arg.IndexOf("=") + 1);
-			var walDirName = "Wallets";
-			Directory.CreateDirectory(walDirName);
-			return Path.Combine(walDirName, walletFileName);
-		}
-		// Inclusive
-		public static void AssertArgumentsLenght(int length, int min, int max)
-		{
-			if(length < min)
-			{
-				WriteLine($"Not enough arguments are specified, minimum: {min}");
-				Exit();
-			}
-			if(length > max)
-			{
-				WriteLine($"Too many arguments are specified, maximum: {max}");
-				Exit();
-			}
+				WriteLine($"Are you sure you want to proceed? (y/n)");
+				response = ReadKey(false).Key;   // true is intercept key (dont show), false is show
+				if (response != ConsoleKey.Enter)
+					WriteLine();
+			} while (response != ConsoleKey.Y && response != ConsoleKey.N);
+			return response;
 		}
 		public static void DisplayHelp()
 		{
 			WriteLine("Possible commands are:");
 			foreach (var cmd in Commands) WriteLine($"\t{cmd}");
 		}
-		public static void Exit()
+		public static void Exit(string reason = "", ConsoleColor color = ConsoleColor.Red)
 		{
+			ForegroundColor = color;
+			WriteLine();
+			WriteLine(reason);
 			WriteLine("Press Enter to exit...");
 			ReadLine();
+			ResetColor();
 			Environment.Exit(0);
 		}
+		#endregion
+		#region Helpers
+		private static Money ParseBtcString(string value)
+		{
+			decimal amount;
+			if (!decimal.TryParse(
+						value.Replace(',', '.'),
+						NumberStyles.Any,
+						CultureInfo.InvariantCulture,
+						out amount))
+			{
+				Exit("Wrong btc amount format.");
+			}
+
+
+			return new Money(amount, MoneyUnit.BTC);
+		}
+		#endregion
 	}
 }
