@@ -7,10 +7,10 @@
   "dependencies": {
     "Microsoft.NETCore.App": {
       "type": "platform",
-      "version": "1.0.1"
+      "version": "1.1.0"
     },
     "NBitcoin": "3.0.0.77",
-    "QBitNinja.Client": "1.0.3.32"
+    "QBitNinja.Client": "1.0.3.33"
   },
 
   "frameworks": {
