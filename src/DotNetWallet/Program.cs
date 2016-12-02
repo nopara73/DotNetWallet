@@ -45,7 +45,7 @@ namespace DotNetWallet
 			//args = new string[] { "receive", "wallet-file=test3.json" };
 			//args = new string[] { "show-history", "wallet-file=test.json" };
 			//args = new string[] { "send", "btc=0.001", "address=mq6fK8fkFyCy9p53m4Gf4fiX2XCHvcwgi1", "wallet-file=test.json" };
-			args = new string[] { "send", "btc=all", "address=mzz63n3n89KVeHQXRqJEVsQX8MZj5zeqCw", "wallet-file=test4.json" };
+			//args = new string[] { "send", "btc=all", "address=mzz63n3n89KVeHQXRqJEVsQX8MZj5zeqCw", "wallet-file=test4.json" };
 
 			// Load config file
 			// It also creates it with default settings if doesn't exist
