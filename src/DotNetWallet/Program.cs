@@ -148,10 +148,6 @@ namespace DotNetWallet
 
 				if (Config.ConnectionType == ConnectionType.Http)
 				{
-					WriteLine();
-					WriteLine("---------------------------------------------------------------------------");
-					WriteLine("Address\t\t\t\t\tConfirmed\tUnconfirmed");
-					WriteLine("---------------------------------------------------------------------------");
 					// 0. Query all operations, grouped by addresses
 					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe, 7);
 
@@ -184,7 +180,11 @@ namespace DotNetWallet
 					}
 
 					// 4. Calculate address balances
-					foreach(var elem in addressHistoryRecordsPerAddresses)
+					WriteLine();
+					WriteLine("---------------------------------------------------------------------------");
+					WriteLine("Address\t\t\t\t\tConfirmed\tUnconfirmed");
+					WriteLine("---------------------------------------------------------------------------");
+					foreach (var elem in addressHistoryRecordsPerAddresses)
 					{
 						Money confirmedBalance;
 						Money unconfirmedBalance;
