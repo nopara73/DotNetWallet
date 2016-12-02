@@ -215,31 +215,12 @@ namespace DotNetWallet
 					WriteLine("Date\t\t\tAmount\t\tConfirmed\tTransaction Id");
 					WriteLine("---------------------------------------------------------------------------");
 
-					// 1. Get all the unique operations
-					var opSet = new HashSet<BalanceOperation>();
-					foreach (var elem in operationsPerAddresses)
-						foreach (var op in elem.Value)
-							opSet.Add(op);
-					if (opSet.Count() == 0) Exit("Wallet has no history yet.");
-
-					// 2. Get all operations, grouped by transactions
-					var operationsPerTransactions = new Dictionary<uint256, List<BalanceOperation>>();
-					foreach(var op in opSet)
-					{
-						var txId = op.TransactionId;
-						List<BalanceOperation> ol;
-						if (operationsPerTransactions.TryGetValue(txId, out ol))
-						{
-							ol.Add(op);
-							operationsPerTransactions[txId] = ol;
-						}
-						else operationsPerTransactions.Add(txId, new List<BalanceOperation> { op });						
-					}
+					Dictionary<uint256, List<BalanceOperation>> operationsPerTransactions = GetOperationsPerTransactions(operationsPerAddresses);
 
 					// 3. Create history records from the transactions
 					// History records is arbitrary data we want to show to the user
 					var txHistoryRecords = new List<Tuple<DateTimeOffset, Money, int, uint256>>();
-					foreach(var elem in operationsPerTransactions)
+					foreach (var elem in operationsPerTransactions)
 					{
 						var amount = Money.Zero;
 						foreach (var op in elem.Value)
@@ -539,6 +520,8 @@ namespace DotNetWallet
 
 			Exit(color: ConsoleColor.Green);
 		}
+
+		
 		#region QBitNinjaJutsus
 		private static bool SelectCoins(ref HashSet<Coin> coinsToSpend, Money totalOutAmount, List<Coin> unspentCoins)
 		{
@@ -581,6 +564,31 @@ namespace DotNetWallet
 			}
 
 			return unspentCoins;
+		}
+		private static Dictionary<uint256, List<BalanceOperation>> GetOperationsPerTransactions(Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses)
+		{
+			// 1. Get all the unique operations
+			var opSet = new HashSet<BalanceOperation>();
+			foreach (var elem in operationsPerAddresses)
+				foreach (var op in elem.Value)
+					opSet.Add(op);
+			if (opSet.Count() == 0) Exit("Wallet has no history yet.");
+
+			// 2. Get all operations, grouped by transactions
+			var operationsPerTransactions = new Dictionary<uint256, List<BalanceOperation>>();
+			foreach (var op in opSet)
+			{
+				var txId = op.TransactionId;
+				List<BalanceOperation> ol;
+				if (operationsPerTransactions.TryGetValue(txId, out ol))
+				{
+					ol.Add(op);
+					operationsPerTransactions[txId] = ol;
+				}
+				else operationsPerTransactions.Add(txId, new List<BalanceOperation> { op });
+			}
+
+			return operationsPerTransactions;
 		}
 		private static Dictionary<BitcoinAddress, List<BalanceOperation>> QueryOperationsPerSafeAddresses(Safe safe, int minUnusedKeys = 7, HdPathType? hdPathType = null)
 		{
@@ -760,7 +768,10 @@ namespace DotNetWallet
 		{
 			ForegroundColor = color;
 			WriteLine();
-			WriteLine(reason);
+			if (reason != "")
+			{
+				WriteLine(reason);
+			}
 			WriteLine("Press any key to exit...");
 			ResetColor();
 			ReadKey();
