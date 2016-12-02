@@ -190,7 +190,7 @@ namespace DotNetWallet
 						Money unconfirmedBalance;
 						GetBalances(elem.Value, out confirmedBalance, out unconfirmedBalance);
 						if (confirmedBalance != Money.Zero || unconfirmedBalance != Money.Zero)
-							WriteLine($"{elem.Key.ToWif()}\t{confirmedBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}\t{unconfirmedBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}");
+							WriteLine($"{elem.Key.ToWif()}\t{confirmedBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}\t\t{unconfirmedBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}");
 					}
 					WriteLine();
 					WriteLine("---------------------------------------------------------------------------");
