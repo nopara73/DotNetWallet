@@ -23,7 +23,8 @@ namespace DotNetWallet.QBitNinjaJutsus
 					confirmedBalance += record.Amount;
 				else
 				{
-					unconfirmedBalance += record.Amount;
+					if (record.Amount > 0)
+						unconfirmedBalance += record.Amount;
 					if (record.Amount < 0)
 						confirmedBalance += record.Amount;
 				}
