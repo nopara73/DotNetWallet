@@ -224,17 +224,50 @@ namespace DotNetWallet
 						Exit("Wallet has no history yet.");
 					}
 
-					var opList = opSet.ToList()
-						.OrderByDescending(x => x.Confirmations)
-						.ThenBy(x => x.FirstSeen);
-					foreach (var op in opList)
+					Dictionary<uint256, List<BalanceOperation>> operationsPerTransactions = new Dictionary<uint256, List<BalanceOperation>>();
+					foreach(var op in opSet)
 					{
-						if (op.Amount > 0)
+						var txId = op.TransactionId;
+						List<BalanceOperation> ol;
+						if (operationsPerTransactions.TryGetValue(txId, out ol))
+						{
+							ol.Add(op);
+							operationsPerTransactions[txId] = ol;
+						}
+						else
+						{
+							operationsPerTransactions.Add(txId, new List<BalanceOperation> { op });
+						}
+					}
+
+					var txHistoryRecords = new List<Tuple<DateTimeOffset, Money, int, uint256>>();
+
+					foreach(var elem in operationsPerTransactions)
+					{
+						var amount = Money.Zero;
+						foreach (var op in elem.Value)
+							amount += op.Amount;
+						var firstOp = elem.Value.First();
+
+						txHistoryRecords
+							.Add(new Tuple<DateTimeOffset, Money, int, uint256>(
+								firstOp.FirstSeen,
+								amount,
+								firstOp.Confirmations,
+								elem.Key));
+					}
+
+					var orderedTxHistoryRecords = txHistoryRecords
+						.OrderByDescending(x => x.Item3) // Confirmations
+						.ThenBy(x => x.Item1); // FirstSeen
+					foreach (var record in orderedTxHistoryRecords)
+					{
+						if (record.Item2 > 0) // Amount
 							ForegroundColor = ConsoleColor.Green;
-						else if (op.Amount < 0)
+						else if (record.Item2 < 0)
 							ForegroundColor = ConsoleColor.Red;
 
-						WriteLine($"{op.FirstSeen.DateTime}\t{op.Amount}\t{op.Confirmations > 0}\t\t{op.TransactionId}");
+						WriteLine($"{record.Item1.DateTime}\t{record.Item2}\t{record.Item3 > 0}\t\t{record.Item4}");
 
 						ResetColor();
 					}
