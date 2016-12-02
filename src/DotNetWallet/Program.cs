@@ -489,7 +489,7 @@ namespace DotNetWallet
 						Exit("Couldn't broadcast the transaction.");
 
 					WriteLine();
-					WriteLine("Transaction is successfully propagated on the network.");
+					Exit("Transaction is successfully propagated on the network.", ConsoleColor.Green);
 				}
 				else if (Config.ConnectionType == ConnectionType.FullNode)
 				{
@@ -694,7 +694,7 @@ namespace DotNetWallet
 				}
 				catch (System.Security.SecurityException)
 				{
-					WriteLine("Invalid password, try again:");
+					WriteLine("Invalid password, try again, (or press ctrl+c to exit):");
 					correctPw = false;
 				}
 			} while (!correctPw);
@@ -726,9 +726,9 @@ namespace DotNetWallet
 			ForegroundColor = color;
 			WriteLine();
 			WriteLine(reason);
-			WriteLine("Press Enter to exit...");
-			ReadLine();
+			WriteLine("Press a key to exit...");
 			ResetColor();
+			ReadKey();
 			Environment.Exit(0);
 		}
 		#endregion
