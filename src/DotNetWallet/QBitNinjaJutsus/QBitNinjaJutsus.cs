@@ -13,7 +13,7 @@ namespace DotNetWallet.QBitNinjaJutsus
 {
     public static class QBitNinjaJutsus
     {
-		public static void GetBalances(List<AddressHistoryRecord> addressHistoryRecords, out Money confirmedBalance, out Money unconfirmedBalance)
+		public static void GetBalances(IEnumerable<AddressHistoryRecord> addressHistoryRecords, out Money confirmedBalance, out Money unconfirmedBalance)
 		{
 			confirmedBalance = Money.Zero;
 			unconfirmedBalance = Money.Zero;

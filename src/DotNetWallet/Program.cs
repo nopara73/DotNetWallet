@@ -40,8 +40,8 @@ namespace DotNetWallet
 			//args = new string[] { "generate-wallet", "wallet-file=test2.json" };
 			////math super cool donate beach mobile sunny web board kingdom bacon crisp
 			////no password
-			//args = new string[] { "recover-wallet", "wallet-file=test4.json" };
-			//args = new string[] { "show-balances", "wallet-file=test4.json" };
+			//args = new string[] { "recover-wallet", "wallet-file=test5.json" };
+			args = new string[] { "show-balances", "wallet-file=test5.json" };
 			//args = new string[] { "receive", "wallet-file=test4.json" };
 			//args = new string[] { "show-history", "wallet-file=test.json" };
 			//args = new string[] { "send", "btc=0.001", "address=mq6fK8fkFyCy9p53m4Gf4fiX2XCHvcwgi1", "wallet-file=test.json" };
@@ -188,14 +188,14 @@ namespace DotNetWallet
 					{
 						Money confirmedBalance;
 						Money unconfirmedBalance;
-						GetBalances(addressHistoryRecords, out confirmedBalance, out unconfirmedBalance);
+						GetBalances(elem.Value, out confirmedBalance, out unconfirmedBalance);
 						if (confirmedBalance != Money.Zero || unconfirmedBalance != Money.Zero)
-							WriteLine($"{elem.Key.ToWif()}\t{confirmedBalance}\t{unconfirmedBalance}");
+							WriteLine($"{elem.Key.ToWif()}\t{confirmedBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}\t{unconfirmedBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}");
 					}
 					WriteLine();
 					WriteLine("---------------------------------------------------------------------------");
-					WriteLine($"Confirmed Wallet Balance: {confirmedWalletBalance}");
-					WriteLine($"Unconfirmed Wallet Balance: {unconfirmedWalletBalance}");
+					WriteLine($"Confirmed Wallet Balance: {confirmedWalletBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}btc");
+					WriteLine($"Unconfirmed Wallet Balance: {unconfirmedWalletBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}btc");
 					WriteLine("---------------------------------------------------------------------------");
 					WriteLine();
 
