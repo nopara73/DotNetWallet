@@ -207,6 +207,7 @@ namespace DotNetWallet
 
 				if (Config.ConnectionType == ConnectionType.Http)
 				{
+					// 0. Query all operations, grouped our used safe addresses
 					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe);
 
 					WriteLine();
@@ -214,17 +215,15 @@ namespace DotNetWallet
 					WriteLine("Date\t\t\tAmount\t\tConfirmed\tTransaction Id");
 					WriteLine("---------------------------------------------------------------------------");
 
-					HashSet<BalanceOperation> opSet = new HashSet<BalanceOperation>();
+					// 1. Get all the unique operations
+					var opSet = new HashSet<BalanceOperation>();
 					foreach (var elem in operationsPerAddresses)
 						foreach (var op in elem.Value)
 							opSet.Add(op);
+					if (opSet.Count() == 0) Exit("Wallet has no history yet.");
 
-					if (opSet.Count() == 0)
-					{
-						Exit("Wallet has no history yet.");
-					}
-
-					Dictionary<uint256, List<BalanceOperation>> operationsPerTransactions = new Dictionary<uint256, List<BalanceOperation>>();
+					// 2. Get all operations, grouped by transactions
+					var operationsPerTransactions = new Dictionary<uint256, List<BalanceOperation>>();
 					foreach(var op in opSet)
 					{
 						var txId = op.TransactionId;
@@ -234,14 +233,12 @@ namespace DotNetWallet
 							ol.Add(op);
 							operationsPerTransactions[txId] = ol;
 						}
-						else
-						{
-							operationsPerTransactions.Add(txId, new List<BalanceOperation> { op });
-						}
+						else operationsPerTransactions.Add(txId, new List<BalanceOperation> { op });						
 					}
 
+					// 3. Create history records from the transactions
+					// History records is arbitrary data we want to show to the user
 					var txHistoryRecords = new List<Tuple<DateTimeOffset, Money, int, uint256>>();
-
 					foreach(var elem in operationsPerTransactions)
 					{
 						var amount = Money.Zero;
@@ -257,21 +254,18 @@ namespace DotNetWallet
 								elem.Key));
 					}
 
+					// 4. Order the records by confirmations and time (Simply time does not work, because of a QBitNinja bug)
 					var orderedTxHistoryRecords = txHistoryRecords
 						.OrderByDescending(x => x.Item3) // Confirmations
 						.ThenBy(x => x.Item1); // FirstSeen
 					foreach (var record in orderedTxHistoryRecords)
 					{
-						if (record.Item2 > 0) // Amount
-							ForegroundColor = ConsoleColor.Green;
-						else if (record.Item2 < 0)
-							ForegroundColor = ConsoleColor.Red;
-
+						// Item2 is the Amount
+						if (record.Item2 > 0) ForegroundColor = ConsoleColor.Green;
+						else if (record.Item2 < 0) ForegroundColor = ConsoleColor.Red;
 						WriteLine($"{record.Item1.DateTime}\t{record.Item2}\t{record.Item3 > 0}\t\t{record.Item4}");
-
 						ResetColor();
 					}
-					WriteLine();
 				}
 				else if (Config.ConnectionType == ConnectionType.FullNode)
 				{
