@@ -1,66 +1,42 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 
 namespace DotNetWallet.Helpers
 {
-	// http://stackoverflow.com/a/7049688/2061103
-	/// <summary>
-	/// Adds some nice help to the console. Static extension methods don't exist (probably for a good reason) so the next best thing is congruent naming.
-	/// </summary>
 	public class PasswordConsole
     {
 		/// <summary>
-		/// Like System.Console.ReadLine(), only with a mask.
+		/// Gets the console password.
 		/// </summary>
-		/// <param name="mask">a <c>char</c> representing your choice of console mask</param>
-		/// <returns>the string the user typed in </returns>
-		public static string ReadPassword(char mask)
+		/// <returns></returns>
+		internal static string ReadPassword()
 		{
-			const int ENTER = 13, BACKSP = 8, CTRLBACKSP = 127;
-			int[] FILTERED = { 0, 27, 9, 10 /*, 32 space, if you care */ }; // const
-
-			var pass = new Stack<char>();
-			char chr = (char)0;
-
-			while ((chr = Console.ReadKey(true).KeyChar) != ENTER)
+			StringBuilder sb = new StringBuilder();
+			while (true)
 			{
-				if (chr == BACKSP)
+				ConsoleKeyInfo cki = Console.ReadKey(true);
+				if (cki.Key == ConsoleKey.Enter)
 				{
-					if (pass.Count > 0)
+					Console.WriteLine();
+					break;
+				}
+
+				if (cki.Key == ConsoleKey.Backspace)
+				{
+					if (sb.Length > 0)
 					{
-						Console.Write("\b \b");
-						pass.Pop();
+						Console.Write("\b\0\b");
+						sb.Length--;
 					}
+
+					continue;
 				}
-				else if (chr == CTRLBACKSP)
-				{
-					while (pass.Count > 0)
-					{
-						Console.Write("\b \b");
-						pass.Pop();
-					}
-				}
-				else if (FILTERED.Count(x => chr == x) > 0) { }
-				else
-				{
-					pass.Push((char)chr);
-					Console.Write(mask);
-				}
+
+				Console.Write('*');
+				sb.Append(cki.KeyChar);
 			}
 
-			Console.WriteLine();
-
-			return new string(pass.Reverse().ToArray());
-		}
-
-		/// <summary>
-		/// Like System.Console.ReadLine(), only with a mask.
-		/// </summary>
-		/// <returns>the string the user typed in </returns>
-		public static string ReadPassword()
-		{
-			return ReadPassword('*');
+			return sb.ToString();
 		}
 	}
 }

@@ -37,15 +37,15 @@ namespace DotNetWallet
 		{
 			//args = new string[] { "help" };
 			//args = new string[] { "generate-wallet" };
-			//args = new string[] { "generate-wallet", "wallet-file=test.json" };
+			//args = new string[] { "generate-wallet", "wallet-file=test2.json" };
 			////math super cool donate beach mobile sunny web board kingdom bacon crisp
 			////no password
-			//args = new string[] { "recover-wallet", "wallet-file=Wallet3.json" };
+			//args = new string[] { "recover-wallet", "wallet-file=test4.json" };
 			//args = new string[] { "show-balances", "wallet-file=test.json" };
-			//args = new string[] { "receive", "wallet-file=test.json" };
+			//args = new string[] { "receive", "wallet-file=test3.json" };
 			//args = new string[] { "show-history", "wallet-file=test.json" };
 			//args = new string[] { "send", "btc=0.001", "address=mq6fK8fkFyCy9p53m4Gf4fiX2XCHvcwgi1", "wallet-file=test.json" };
-			//args = new string[] { "send", "btc=all", "address=mzKvnpSsrjBXmNngo3t5w7abR5tTWE7Z9V", "wallet-file=test.json" };
+			args = new string[] { "send", "btc=all", "address=mzz63n3n89KVeHQXRqJEVsQX8MZj5zeqCw", "wallet-file=test4.json" };
 
 			// Load config file
 			// It also creates it with default settings if doesn't exist
