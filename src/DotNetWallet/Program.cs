@@ -469,10 +469,11 @@ namespace DotNetWallet
 					var qBitClient = new QBitNinjaClient(Config.Network);
 					var broadcastResponse = qBitClient.Broadcast(tx).Result;
 
-					if(broadcastResponse.Error != null)
-					{
-						Exit($"Error code: {broadcastResponse.Error.ErrorCode} Reason: {broadcastResponse.Error.Reason}");
-					}
+					// this is buggy, so I uncomment it
+					//if(broadcastResponse.Error != null)
+					//{
+					//	Exit($"Error code: {broadcastResponse.Error.ErrorCode} Reason: {broadcastResponse.Error.Reason}");
+					//}
 					if (!broadcastResponse.Success)
 					{
 						Exit("Couldn't broadcast the transaction.");
