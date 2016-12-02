@@ -13,11 +13,11 @@ namespace DotNetWallet.KeyManagement
 		public Network Network => _network;
 		private ExtKey _seedPrivateKey;
 		public BitcoinExtPubKey SeedPublicKey => _seedPrivateKey.Neuter().GetWif(Network);
-		public BitcoinAddress GetAddress(int index, HdPathType hdPathType = HdPathType.Normal)
+		public BitcoinAddress GetAddress(int index, HdPathType hdPathType = HdPathType.Receive)
 		{
 			return GetPrivateKey(index, hdPathType).ScriptPubKey.GetDestinationAddress(Network);
 		}
-		public HashSet<BitcoinAddress>  GetFirstNAddresses(int addressCount, HdPathType hdPathType = HdPathType.Normal)
+		public HashSet<BitcoinAddress>  GetFirstNAddresses(int addressCount, HdPathType hdPathType = HdPathType.Receive)
 		{
 			var addresses = new HashSet<BitcoinAddress>();			
 
@@ -144,12 +144,12 @@ namespace DotNetWallet.KeyManagement
 		}
 		#region Hierarchy
 		private const string StealthPath = "0'";
-		private const string NormalHdPath = "1'";
+		private const string ReceiveHdPath = "1'";
 		private const string ChangeHdPath = "2'";
 		
 		public enum HdPathType
 		{
-			Normal,
+			Receive,
 			Change
 		}
 		#endregion
@@ -158,19 +158,19 @@ namespace DotNetWallet.KeyManagement
 		{
 			for(int i = 0; i < stopSearchAfterIteration; i++)
 			{
-				if (GetAddress(i, HdPathType.Normal) == address)
-					return GetPrivateKey(i, HdPathType.Normal);
+				if (GetAddress(i, HdPathType.Receive) == address)
+					return GetPrivateKey(i, HdPathType.Receive);
 				if (GetAddress(i, HdPathType.Change) == address)
 					return GetPrivateKey(i, HdPathType.Change);
 			}
 			throw new Exception("Bitcoin address not found.");
 		}
-		internal BitcoinExtKey GetPrivateKey(int index, HdPathType hdPathType = HdPathType.Normal)
+		internal BitcoinExtKey GetPrivateKey(int index, HdPathType hdPathType = HdPathType.Receive)
 		{
 			string startPath;
-			if (hdPathType == HdPathType.Normal)
+			if (hdPathType == HdPathType.Receive)
 			{
-				startPath = NormalHdPath;
+				startPath = ReceiveHdPath;
 			}
 			else if (hdPathType == HdPathType.Change)
 			{

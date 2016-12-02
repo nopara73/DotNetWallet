@@ -259,7 +259,7 @@ namespace DotNetWallet
 
 				if (Config.ConnectionType == ConnectionType.Http)
 				{
-					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerNormalAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Normal);
+					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerNormalAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Receive);
 
 					WriteLine();
 					WriteLine("---------------------------------------------------------------------------");
@@ -465,30 +465,38 @@ namespace DotNetWallet
 					
 					WriteLine($"Transaction Id: {tx.GetHash()}");
 
-					WriteLine("Broadcasting transaction...");
 					var qBitClient = new QBitNinjaClient(Config.Network);
-					var broadcastResponse = qBitClient.Broadcast(tx).Result;
 
-					// this is buggy, so I uncomment it
-					//if(broadcastResponse.Error != null)
-					//{
-					//	Exit($"Error code: {broadcastResponse.Error.ErrorCode} Reason: {broadcastResponse.Error.Reason}");
-					//}
-					if (!broadcastResponse.Success)
+					// QBit's success response is buggy so let's check manually, too		
+					BroadcastResponse broadcastResponse;
+					var success = false;
+					var tried = 0;
+					var maxTry = 7;
+					do
 					{
-						Exit("Couldn't broadcast the transaction.");
-					}
-					// QBit's succes response is buggy so let's check manually, too
-					var getTxResp = qBitClient.GetTransaction(tx.GetHash()).Result;
-					if(getTxResp == null)
+						tried++;
+						WriteLine("Try broadcasting transaction... (i)");
+						broadcastResponse = qBitClient.Broadcast(tx).Result;
+						var getTxResp = qBitClient.GetTransaction(tx.GetHash()).Result;
+						if (getTxResp == null)
+						{
+							Thread.Sleep(3000);
+							continue;
+						}
+						else
+						{
+							success = true;
+							break;
+						}
+					} while (tried <= maxTry);
+					if (!success)
 					{
-						Thread.Sleep(3000);
-						getTxResp = qBitClient.GetTransaction(tx.GetHash()).Result;
+						if (broadcastResponse.Error != null)
+						{
+							WriteLine($"Error code: {broadcastResponse.Error.ErrorCode} Reason: {broadcastResponse.Error.Reason}");
+						}
+						Exit($"The transaction might not have been successfully broadcasted. Please check the Transaction ID in a block explorer.", ConsoleColor.Blue);
 					}
-					if(getTxResp == null)
-						Exit("Couldn't broadcast the transaction.");
-
-					WriteLine();
 					Exit("Transaction is successfully propagated on the network.", ConsoleColor.Green);
 				}
 				else if (Config.ConnectionType == ConnectionType.FullNode)
@@ -551,7 +559,7 @@ namespace DotNetWallet
 		{
 			if(hdPathType == null)
 			{
-				Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerNormalAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Normal);
+				Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerNormalAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Receive);
 				Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerChangeAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Change);
 
 				var operationsPerAllAddresses = new Dictionary<BitcoinAddress, List<BalanceOperation>>();
@@ -726,7 +734,7 @@ namespace DotNetWallet
 			ForegroundColor = color;
 			WriteLine();
 			WriteLine(reason);
-			WriteLine("Press a key to exit...");
+			WriteLine("Press any key to exit...");
 			ResetColor();
 			ReadKey();
 			Environment.Exit(0);
