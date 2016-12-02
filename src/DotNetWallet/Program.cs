@@ -475,7 +475,7 @@ namespace DotNetWallet
 					do
 					{
 						tried++;
-						WriteLine("Try broadcasting transaction... (i)");
+						WriteLine($"Try broadcasting transaction... ({tried})");
 						broadcastResponse = qBitClient.Broadcast(tx).Result;
 						var getTxResp = qBitClient.GetTransaction(tx.GetHash()).Result;
 						if (getTxResp == null)
