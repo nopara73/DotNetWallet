@@ -154,12 +154,14 @@ namespace DotNetWallet.KeyManagement
 		}
 		#endregion
 
-		internal BitcoinExtKey GetPrivateKey(BitcoinAddress address, int stopSearchAfterIteration = 100000, HdPathType hdPathType = HdPathType.Normal)
+		internal BitcoinExtKey FindPrivateKey(BitcoinAddress address, int stopSearchAfterIteration = 100000)
 		{
 			for(int i = 0; i < stopSearchAfterIteration; i++)
 			{
-				if (GetAddress(i, hdPathType) == address)
-					return GetPrivateKey(i, hdPathType);
+				if (GetAddress(i, HdPathType.Normal) == address)
+					return GetPrivateKey(i, HdPathType.Normal);
+				if (GetAddress(i, HdPathType.Change) == address)
+					return GetPrivateKey(i, HdPathType.Change);
 			}
 			throw new Exception("Bitcoin address not found.");
 		}
@@ -176,7 +178,7 @@ namespace DotNetWallet.KeyManagement
 			}
 			else throw new Exception("HdPathType not exists");
 
-			var keyPath = new KeyPath(startPath + "/" + index);
+			var keyPath = new KeyPath(startPath + "/" + index + "'");
 			return _seedPrivateKey.Derive(keyPath).GetWif(_network);
 		}
 	}

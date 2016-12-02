@@ -41,8 +41,8 @@ namespace DotNetWallet
 			////math super cool donate beach mobile sunny web board kingdom bacon crisp
 			////no password
 			//args = new string[] { "recover-wallet", "wallet-file=test4.json" };
-			//args = new string[] { "show-balances", "wallet-file=test.json" };
-			//args = new string[] { "receive", "wallet-file=test3.json" };
+			//args = new string[] { "show-balances", "wallet-file=test4.json" };
+			//args = new string[] { "receive", "wallet-file=test4.json" };
 			//args = new string[] { "show-history", "wallet-file=test.json" };
 			//args = new string[] { "send", "btc=0.001", "address=mq6fK8fkFyCy9p53m4Gf4fiX2XCHvcwgi1", "wallet-file=test.json" };
 			//args = new string[] { "send", "btc=all", "address=mzz63n3n89KVeHQXRqJEVsQX8MZj5zeqCw", "wallet-file=test4.json" };
@@ -312,7 +312,7 @@ namespace DotNetWallet
 						foreach (var op in elem.Value) balance += op.Amount;
 						if (balance > Money.Zero)
 						{
-							var secret = safe.GetPrivateKey(elem.Key);
+							var secret = safe.FindPrivateKey(elem.Key);
 							operationsPerNotEmptyPrivateKeys.Add(secret, elem.Value);
 						}
 					}
@@ -324,7 +324,7 @@ namespace DotNetWallet
 					foreach (var elem in operationsPerChangeAddresses)
 					{
 						if (elem.Value.Count == 0)
-							changeScriptPubKey = safe.GetPrivateKey(elem.Key, hdPathType: HdPathType.Change).ScriptPubKey;
+							changeScriptPubKey = safe.FindPrivateKey(elem.Key).ScriptPubKey;
 					}
 					if (changeScriptPubKey == null)
 						throw new ArgumentNullException();
