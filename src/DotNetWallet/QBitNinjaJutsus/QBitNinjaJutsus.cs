@@ -18,9 +18,16 @@ namespace DotNetWallet.QBitNinjaJutsus
 			confirmedBalance = Money.Zero;
 			unconfirmedBalance = Money.Zero;
 			foreach (var record in addressHistoryRecords)
+			{
 				if (record.Confirmed)
 					confirmedBalance += record.Amount;
-				else unconfirmedBalance += record.Amount;
+				else
+				{
+					unconfirmedBalance += record.Amount;
+					if (record.Amount < 0)
+						confirmedBalance += record.Amount;
+				}
+			}
 		}
 		public static bool SelectCoins(ref HashSet<Coin> coinsToSpend, Money totalOutAmount, List<Coin> unspentCoins)
 		{
