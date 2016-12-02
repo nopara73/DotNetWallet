@@ -62,9 +62,9 @@ namespace DotNetWallet
 				WriteLine("Wrong command is specified.");
 				DisplayHelp();
 			}
-			foreach(var arg in args.Skip(1))
+			foreach (var arg in args.Skip(1))
 			{
-				if(!arg.Contains('='))
+				if (!arg.Contains('='))
 				{
 					Exit($"Wrong argument format specified: {arg}");
 				}
@@ -76,7 +76,7 @@ namespace DotNetWallet
 				AssertArgumentsLenght(args.Length, 1, 1);
 				DisplayHelp();
 			}
-			#endregion			
+			#endregion
 			#region GenerateWalletCommand
 			if (command == "generate-wallet")
 			{
@@ -146,11 +146,11 @@ namespace DotNetWallet
 				var walletFilePath = GetWalletFilePath(args);
 				Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
 
-				if(Config.ConnectionType == ConnectionType.Http)
+				if (Config.ConnectionType == ConnectionType.Http)
 				{
 					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery);
-					
-					WriteLine();					
+
+					WriteLine();
 					WriteLine("---------------------------------------------------------------------------");
 					WriteLine("Address\t\t\t\t\tConfirmed\tUnconfirmed");
 					WriteLine("---------------------------------------------------------------------------");
@@ -162,7 +162,7 @@ namespace DotNetWallet
 
 						var confirmedAddrBalance = Money.Zero;
 						var unconfirmedAddrBalance = Money.Zero;
-						
+
 						foreach (var op in operations)
 						{
 							if (op.Confirmations > 0)
@@ -177,7 +177,7 @@ namespace DotNetWallet
 						confirmedWallBalance += confirmedAddrBalance;
 						unconfirmedWallBalance += unconfirmedAddrBalance;
 
-						if(confirmedAddrBalance != Money.Zero || unconfirmedAddrBalance != Money.Zero)
+						if (confirmedAddrBalance != Money.Zero || unconfirmedAddrBalance != Money.Zero)
 							WriteLine($"{elem.Key.ToWif()}\t{confirmedAddrBalance}\t{unconfirmedAddrBalance}");
 					}
 					WriteLine();
@@ -188,7 +188,7 @@ namespace DotNetWallet
 					WriteLine();
 
 				}
-				else if(Config.ConnectionType == ConnectionType.FullNode)
+				else if (Config.ConnectionType == ConnectionType.FullNode)
 				{
 					throw new NotImplementedException();
 				}
@@ -259,15 +259,15 @@ namespace DotNetWallet
 
 				if (Config.ConnectionType == ConnectionType.Http)
 				{
-					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerNormalAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Receive);
+					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerReceiveAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Receive);
 
 					WriteLine();
 					WriteLine("---------------------------------------------------------------------------");
 					WriteLine("Unused Receive Addresses");
 					WriteLine("---------------------------------------------------------------------------");
-					foreach (var elem in operationsPerNormalAddresses)
+					foreach (var elem in operationsPerReceiveAddresses)
 					{
-						if(elem.Value.Count == 0)
+						if (elem.Value.Count == 0)
 							WriteLine($"{elem.Key.ToWif()}");
 					}
 					WriteLine();
@@ -289,10 +289,10 @@ namespace DotNetWallet
 				var walletFilePath = GetWalletFilePath(args);
 				BitcoinAddress addressToSend;
 				try
-				{			
+				{
 					addressToSend = BitcoinAddress.Create(GetArgumentValue(args, argName: "address", required: true), Config.Network);
 				}
-				catch(Exception ex)
+				catch (Exception ex)
 				{
 					Exit(ex.ToString());
 					throw ex;
@@ -365,7 +365,7 @@ namespace DotNetWallet
 						if (Config.CanSpendUnconfirmed)
 						{
 							availableAmount += elem.Key.Amount;
-							if(!elem.Value)
+							if (!elem.Value)
 								unconfirmedAvailableAmount += elem.Key.Amount;
 						}
 						// else only add confirmed ones
@@ -440,9 +440,9 @@ namespace DotNetWallet
 
 					// 9. Get signing keys
 					var signingKeys = new HashSet<ISecret>();
-					foreach(var coin in coinsToSpend)
+					foreach (var coin in coinsToSpend)
 					{
-						foreach(var elem in operationsPerNotEmptyPrivateKeys)
+						foreach (var elem in operationsPerNotEmptyPrivateKeys)
 						{
 							if (elem.Key.ScriptPubKey == coin.ScriptPubKey)
 								signingKeys.Add(elem.Key);
@@ -462,7 +462,7 @@ namespace DotNetWallet
 
 					if (!builder.Verify(tx))
 						Exit("Couldn't build the transaction.");
-					
+
 					WriteLine($"Transaction Id: {tx.GetHash()}");
 
 					var qBitClient = new QBitNinjaClient(Config.Network);
@@ -546,7 +546,7 @@ namespace DotNetWallet
 				var balanceModel = client.GetBalance(destination, unspentOnly: true).Result;
 				foreach (var operation in balanceModel.Operations)
 				{
-					foreach(var elem in operation.ReceivedCoins.Select(coin => coin as Coin))
+					foreach (var elem in operation.ReceivedCoins.Select(coin => coin as Coin))
 					{
 						unspentCoins.Add(elem, operation.Confirmations > 0);
 					}
@@ -557,13 +557,13 @@ namespace DotNetWallet
 		}
 		private static Dictionary<BitcoinAddress, List<BalanceOperation>> QueryOperationsPerSafeAddresses(Safe safe, int minUnusedKeys = 7, HdPathType? hdPathType = null)
 		{
-			if(hdPathType == null)
+			if (hdPathType == null)
 			{
-				Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerNormalAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Receive);
+				Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerReceiveAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Receive);
 				Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerChangeAddresses = QueryOperationsPerSafeAddresses(safe, MinUnusedKeysToQuery, HdPathType.Change);
 
 				var operationsPerAllAddresses = new Dictionary<BitcoinAddress, List<BalanceOperation>>();
-				foreach (var elem in operationsPerNormalAddresses)
+				foreach (var elem in operationsPerReceiveAddresses)
 					operationsPerAllAddresses.Add(elem.Key, elem.Value);
 				foreach (var elem in operationsPerChangeAddresses)
 					operationsPerAllAddresses.Add(elem.Key, elem.Value);
@@ -583,10 +583,10 @@ namespace DotNetWallet
 			WriteLine($"{operationsPerAddresses.Count} {hdPathType} keys are processed.");
 
 			var startIndex = minUnusedKeys;
-			while(unusedKeyCount < minUnusedKeys)
+			while (unusedKeyCount < minUnusedKeys)
 			{
 				addresses = new HashSet<BitcoinAddress>();
-				for(int i = startIndex; i < startIndex + minUnusedKeys; i++)
+				for (int i = startIndex; i < startIndex + minUnusedKeys; i++)
 				{
 					addresses.Add(safe.GetAddress(i, hdPathType.GetValueOrDefault()));
 					//addresses.Add(FakeData.FakeSafe.GetAddress(i));
@@ -613,7 +613,7 @@ namespace DotNetWallet
 			}
 			return operationsPerAddresses;
 		}
-		#endregion				
+		#endregion
 		#region Assertions
 		public static void AssertWalletNotExists(string walletFilePath)
 		{
@@ -640,17 +640,17 @@ namespace DotNetWallet
 			}
 			catch (FormatException) { }
 			catch (NotSupportedException) { }
-			
+
 			Exit("Incorrect mnemonic format.");
 		}
 		// Inclusive
 		public static void AssertArgumentsLenght(int length, int min, int max)
 		{
-			if(length < min)
+			if (length < min)
 			{
 				Exit($"Not enough arguments are specified, minimum: {min}");
 			}
-			if(length > max)
+			if (length > max)
 			{
 				Exit($"Too many arguments are specified, maximum: {max}");
 			}
