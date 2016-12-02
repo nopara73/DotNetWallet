@@ -41,7 +41,7 @@ namespace DotNetWallet
 			////math super cool donate beach mobile sunny web board kingdom bacon crisp
 			////no password
 			//args = new string[] { "recover-wallet", "wallet-file=test5.json" };
-			args = new string[] { "show-balances", "wallet-file=test5.json" };
+			//args = new string[] { "show-balances", "wallet-file=test5.json" };
 			//args = new string[] { "receive", "wallet-file=test4.json" };
 			//args = new string[] { "show-history", "wallet-file=test.json" };
 			//args = new string[] { "send", "btc=0.001", "address=mq6fK8fkFyCy9p53m4Gf4fiX2XCHvcwgi1", "wallet-file=test.json" };
