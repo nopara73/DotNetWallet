@@ -1,7 +1,7 @@
 # DotNetWallet
 Cross platform Bitcoin wallet implementation in .NET Core for a CodeProject tutorial: [Build a Bitcoin wallet in C#](https://www.codeproject.com/script/Articles/ArticleVersion.aspx?waid=214550&aid=1115639)  
   
-The wallet is also the first iteration of a dedicated wallet for a Bitcoin privacy improvement technique, called [TumbleBit](https://github.com/BUSEC/TumbleBit). TumbleBit will be integrated through [NTumbleBit](https://github.com/NTumbleBit/NTumbleBit), however in a new repository with new name. This repository will stay as is for the shake of a the CodeProject tutorial.  
+The wallet might also will turn out to be the first iteration of a dedicated wallet for a Bitcoin privacy improvement technique, called [TumbleBit](https://github.com/BUSEC/TumbleBit). TumbleBit will be integrated through [NTumbleBit](https://github.com/NTumbleBit/NTumbleBit), however in a new repository with new name. This repository will stay as is for the shake of a the CodeProject tutorial.  
   
 The wallet can communicate with the network through HTTP API and paved the way for a full node integration.  
 It has a Command Line Interface.
@@ -156,4 +156,39 @@ Broadcasting transaction...
 
 Transaction is successfully propagated on the network.
 ```
-Finally send all the money from the address to somewhere: `dotnet run send btc=all address=mzz63n3n89KVeHQXRqJEVsQX8MZj5zeqCw wallet-file=recovered.json`
+Finally send all your money from the address to somewhere: `dotnet run send address=miasyhU2EhANWVGAoD9PicPACCUhUzdDN4 btc=0.01`
+
+```
+Type your password:
+
+Wallets/test wallet is decrypted.
+7 Receive keys are processed.
+14 Receive keys are processed.
+7 Change keys are processed.
+14 Change keys are processed.
+Finding not empty private keys...
+Select change address...
+1 Change keys are processed.
+2 Change keys are processed.
+3 Change keys are processed.
+4 Change keys are processed.
+5 Change keys are processed.
+6 Change keys are processed.
+Gathering unspent coins...
+Calculating transaction fee...
+Fee: 0.00025btc
+
+The transaction fee is 2% of your transaction amount.
+Sending:	 0.01btc
+Fee:		 0.00025btc
+Are you sure you want to proceed? (y/n)
+y
+Selecting coins...
+Signing transaction...
+Transaction Id: ad29443fee2e22460586ed0855799e32d6a3804d2df059c102877cc8cf1df2ad
+Try broadcasting transaction... (1)
+
+Transaction is successfully propagated on the network.
+```
+
+You can specify an optional `wallet-file=` argument to any command if you wish not to use the default wallet file, like `wallet-file=testwallet.json`.  
