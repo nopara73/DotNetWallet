@@ -114,7 +114,6 @@ namespace DotNetWallet
 				WriteLine("-------");
 				WriteLine(mnemonic);
 				WriteLine("-------");
-				WriteLine();
 			}
 			#endregion
 			#region RecoverWalletCommand
@@ -192,13 +191,10 @@ namespace DotNetWallet
 						if (confirmedBalance != Money.Zero || unconfirmedBalance != Money.Zero)
 							WriteLine($"{elem.Key.ToWif()}\t{confirmedBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}\t\t{unconfirmedBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}");
 					}
-					WriteLine();
 					WriteLine("---------------------------------------------------------------------------");
 					WriteLine($"Confirmed Wallet Balance: {confirmedWalletBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}btc");
 					WriteLine($"Unconfirmed Wallet Balance: {unconfirmedWalletBalance.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}btc");
 					WriteLine("---------------------------------------------------------------------------");
-					WriteLine();
-
 				}
 				else if (Config.ConnectionType == ConnectionType.FullNode)
 				{
@@ -281,16 +277,12 @@ namespace DotNetWallet
 				{
 					Dictionary<BitcoinAddress, List<BalanceOperation>> operationsPerReceiveAddresses = QueryOperationsPerSafeAddresses(safe, 7, HdPathType.Receive);
 
-					WriteLine();
 					WriteLine("---------------------------------------------------------------------------");
 					WriteLine("Unused Receive Addresses");
 					WriteLine("---------------------------------------------------------------------------");
 					foreach (var elem in operationsPerReceiveAddresses)
-					{
 						if (elem.Value.Count == 0)
 							WriteLine($"{elem.Key.ToWif()}");
-					}
-					WriteLine();
 				}
 				else if (Config.ConnectionType == ConnectionType.FullNode)
 				{
