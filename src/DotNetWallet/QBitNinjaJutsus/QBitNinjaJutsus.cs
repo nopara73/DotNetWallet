@@ -1,12 +1,9 @@
-﻿using DotNetWallet.KeyManagement;
-using NBitcoin;
+﻿using NBitcoin;
 using QBitNinja.Client;
 using QBitNinja.Client.Models;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using static DotNetWallet.KeyManagement.Safe;
+using HBitcoin.KeyManagement;
 using static System.Console;
 
 namespace DotNetWallet.QBitNinjaJutsus

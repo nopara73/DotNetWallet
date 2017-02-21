@@ -1,5 +1,4 @@
 ﻿using DotNetWallet.Helpers;
-using DotNetWallet.KeyManagement;
 using NBitcoin;
 using Newtonsoft.Json.Linq;
 using QBitNinja.Client;
@@ -12,9 +11,9 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using static DotNetWallet.QBitNinjaJutsus.QBitNinjaJutsus;
-using static DotNetWallet.KeyManagement.Safe;
 using static System.Console;
 using DotNetWallet.QBitNinjaJutsus;
+using HBitcoin.KeyManagement;
 
 namespace DotNetWallet
 {
@@ -99,7 +98,7 @@ namespace DotNetWallet
 				} while (pw != pwConf);
 
 				// 3. Create wallet
-				string mnemonic;
+				Mnemonic mnemonic;
 				Safe safe = Safe.Create(out mnemonic, pw, walletFilePath, Config.Network);
 				// If no exception thrown the wallet is successfully created.
 				WriteLine();
@@ -125,8 +124,9 @@ namespace DotNetWallet
 
 				WriteLine($"Your software is configured using the Bitcoin {Config.Network} network.");
 				WriteLine("Provide your mnemonic words, separated by spaces:");
-				var mnemonic = ReadLine();
-				AssertCorrectMnemonicFormat(mnemonic);
+				var mnemonicString = ReadLine();
+				AssertCorrectMnemonicFormat(mnemonicString);
+				var mnemonic = new Mnemonic(mnemonicString);
 
 				WriteLine("Provide your password. Please note the wallet cannot check if your password is correct or not. If you provide a wrong password a wallet will be recovered with your provided mnemonic AND password pair:");
 				var password = PasswordConsole.ReadPassword();
