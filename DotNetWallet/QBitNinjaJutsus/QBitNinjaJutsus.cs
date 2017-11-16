@@ -121,7 +121,7 @@ namespace DotNetWallet.QBitNinjaJutsus
 			var startIndex = minUnusedKeys;
 			while (unusedKeyCount < minUnusedKeys)
 			{
-				addresses = new HashSet<BitcoinAddress>();
+				addresses = new List<BitcoinAddress>();
 				for (int i = startIndex; i < startIndex + minUnusedKeys; i++)
 				{
 					addresses.Add(safe.GetAddress(i, hdPathType.GetValueOrDefault()));
@@ -138,7 +138,7 @@ namespace DotNetWallet.QBitNinjaJutsus
 
 			return operationsPerAddresses;
 		}
-		public static Dictionary<BitcoinAddress, List<BalanceOperation>> QueryOperationsPerAddresses(HashSet<BitcoinAddress> addresses)
+		public static Dictionary<BitcoinAddress, List<BalanceOperation>> QueryOperationsPerAddresses(IEnumerable<BitcoinAddress> addresses)
 		{
 			var operationsPerAddresses = new Dictionary<BitcoinAddress, List<BalanceOperation>>();
 			var client = new QBitNinjaClient(Config.Network);
