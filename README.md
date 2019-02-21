@@ -13,7 +13,7 @@ After you acquired dotnet core build the software:
 
 ```
 git clone https://github.com/nopara73/DotNetWallet/    
-cd DotNetWallet/src/DotNetWallet/  
+cd DotNetWallet/DotNetWallet/  
 dotnet restore  
 dotnet build  
 ```  
