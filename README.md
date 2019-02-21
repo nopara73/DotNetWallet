@@ -7,7 +7,7 @@ For further directions of its development see: [HiddenWallet](https://github.com
 The wallet can communicate with the network through HTTP API and paved the way for a full node integration.  
 It has a Command Line Interface.
   
-##How to use it
+## How to use it
 The app is cross-platform, you can try it in any OS. You only need to get [dotnet core](https://www.microsoft.com/net/core).  
 After you acquired dotnet core build the software:  
 
@@ -40,7 +40,7 @@ Default config looks like this:
 **"ConnectionType"** can be `"Http"` or `"FullNode"`. Full node mode is not implemented.  
 **"CanSpendUnconfirmed"** can be `"False"` or `"True"`. Change to "True", so you can play around with it without waiting for confirmations.  
   
-###Walkthrough  
+### Walkthrough  
   
 Generate a wallet with `dotnet run generate-wallet`.  
 **Output:**
