@@ -72,14 +72,14 @@ namespace DotNetWallet
             #region HelpCommand
             if (command == "help")
             {
-                AssertArgumentsLenght(args.Length, 1, 1);
+                AssertArgumentsLength(args.Length, 1, 1);
                 DisplayHelp();
             }
             #endregion
             #region GenerateWalletCommand
             if (command == "generate-wallet")
             {
-                AssertArgumentsLenght(args.Length, 1, 2);
+                AssertArgumentsLength(args.Length, 1, 2);
                 var walletFilePath = GetWalletFilePath(args);
                 AssertWalletNotExists(walletFilePath);
 
@@ -118,7 +118,7 @@ namespace DotNetWallet
             #region RecoverWalletCommand
             if (command == "recover-wallet")
             {
-                AssertArgumentsLenght(args.Length, 1, 2);
+                AssertArgumentsLength(args.Length, 1, 2);
                 var walletFilePath = GetWalletFilePath(args);
                 AssertWalletNotExists(walletFilePath);
 
@@ -141,7 +141,7 @@ namespace DotNetWallet
             #region ShowBalancesCommand
             if (command == "show-balances")
             {
-                AssertArgumentsLenght(args.Length, 1, 2);
+                AssertArgumentsLength(args.Length, 1, 2);
                 var walletFilePath = GetWalletFilePath(args);
                 Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
 
@@ -209,7 +209,7 @@ namespace DotNetWallet
             #region ShowHistoryCommand
             if (command == "show-history")
             {
-                AssertArgumentsLenght(args.Length, 1, 2);
+                AssertArgumentsLength(args.Length, 1, 2);
                 var walletFilePath = GetWalletFilePath(args);
                 Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
 
@@ -269,7 +269,7 @@ namespace DotNetWallet
             #region ReceiveCommand
             if (command == "receive")
             {
-                AssertArgumentsLenght(args.Length, 1, 2);
+                AssertArgumentsLength(args.Length, 1, 2);
                 var walletFilePath = GetWalletFilePath(args);
                 Safe safe = DecryptWalletByAskingForPassword(walletFilePath);
 
@@ -297,7 +297,7 @@ namespace DotNetWallet
             #region SendCommand
             if (command == "send")
             {
-                AssertArgumentsLenght(args.Length, 3, 4);
+                AssertArgumentsLength(args.Length, 3, 4);
                 var walletFilePath = GetWalletFilePath(args);
                 BitcoinAddress addressToSend;
                 try
@@ -555,7 +555,7 @@ namespace DotNetWallet
             Exit("Incorrect mnemonic format.");
         }
         // Inclusive
-        public static void AssertArgumentsLenght(int length, int min, int max)
+        public static void AssertArgumentsLength(int length, int min, int max)
         {
             if (length < min)
             {
