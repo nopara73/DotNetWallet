@@ -354,7 +354,7 @@ namespace DotNetWallet
                         using (var client = new HttpClient())
                         {
 
-                            const string request = @"https://bitcoinfees.21.co/api/v1/fees/recommended";
+                            const string request = @"https://bitcoinfees.earn.com/api/v1/fees/recommended";
                             var result = client.GetAsync(request, HttpCompletionOption.ResponseContentRead).Result;
                             var json = JObject.Parse(result.Content.ReadAsStringAsync().Result);
                             var fastestSatoshiPerByteFee = json.Value<decimal>("fastestFee");
