@@ -42,7 +42,7 @@ Default config looks like this:
   
 ###Walkthrough  
   
-Generate a wallet with `dotnet run generate-wallet`.  
+Generate a wallet with `dotnet run -- generate-wallet`.  
 **Output:**
 ```
 Choose a password:
@@ -60,7 +60,7 @@ With the mnemonic words AND your password you can recover this wallet by using t
 virus into smooth shock eternal task guitar bus glide taste glow barrel
 -------
 ```
-Recover your wallet to an other wallet file:  `dotnet run recover-wallet wallet-file=recovered.json`  
+Recover your wallet to an other wallet file:  `dotnet run -- recover-wallet wallet-file=recovered.json`  
 **Output:**
 ```
 Your software is configured using the Bitcoin TestNet network.
@@ -72,7 +72,7 @@ Provide your password. Please note the wallet cannot check if your password is c
 Wallet is successfully recovered.
 Wallet file: Wallets/recovered.json
 ```
-[Get some testnet bitcoins](http://tpfaucet.appspot.com/) to the wallet. You can get unused addresses with:  `dotnet run receive`  
+[Get some testnet bitcoins](http://tpfaucet.appspot.com/) to the wallet. You can get unused addresses with:  `dotnet run -- receive`  
 **Output:**
 ```
 Type your password:
@@ -91,7 +91,7 @@ mmwccp4GefhPn4P6Mui6DGLGzHTVyQ12tD
 miTedyDXJAz6GYMRasiJk9M3ibnGnb99M1
 mrsb39MmPceSPfKAURTH23hYgLRH1M1Uhg
 ```
-Check out your balances:  `dotnet run show-balances`  
+Check out your balances:  `dotnet run -- show-balances`  
 **Output:**
 ```
 Type your password:
@@ -112,7 +112,7 @@ Confirmed Wallet Balance: 0.00000000
 Unconfirmed Wallet Balance: 0.03590000
 ---------------------------------------------------------------------------
 ```
-Check out your wallet history: `dotnet run show-history`
+Check out your wallet history: `dotnet run -- show-history`
 ```
 Type your password:
 ***
@@ -130,7 +130,7 @@ Date			Amount		Confirmed	Transaction Id
 12/1/16 11:19:43 PM	0.00870000	False		986fe7630d66978cfa888df6b47303e97051a0cbf4145a9787b493fbe18b2d42
 12/1/16 11:20:41 PM	0.00100000	False		ffb04388d228c52135d4e2212245c91c116b6f3a228418831715065ffcb056d9
 ```
-Send some money to a random address: `dotnet run send address=mxYpuqcSRbdFBgUkeErYSCT14Em72ZUTQn btc=0.016`
+Send some money to a random address: `dotnet run -- send address=mxYpuqcSRbdFBgUkeErYSCT14Em72ZUTQn btc=0.016`
 ```
 Type your password:
 ***
@@ -157,7 +157,7 @@ Broadcasting transaction...
 
 Transaction is successfully propagated on the network.
 ```
-Finally send all your money from the address to somewhere: `dotnet run send address=miasyhU2EhANWVGAoD9PicPACCUhUzdDN4 btc=0.01`
+Finally send all your money from the address to somewhere: `dotnet run -- send address=miasyhU2EhANWVGAoD9PicPACCUhUzdDN4 btc=0.01`
 
 ```
 Type your password:
