@@ -16,7 +16,6 @@ namespace DotNetWallet
         public static string DefaultWalletFileName = @"Wallet.json";
         public static Network Network = Network.Main;
         public static ConnectionType ConnectionType = ConnectionType.Http;
-        public static bool CanSpendUnconfirmed = false;
 
         static Config()
         {
@@ -51,19 +50,10 @@ namespace DotNetWallet
                 throw new Exception($"ConnectionType is missing from {ConfigFileSerializer.ConfigFilePath}");
             else
                 throw new Exception($"Wrong ConnectionType is specified in {ConfigFileSerializer.ConfigFilePath}");
-
-            if (rawContent.CanSpendUnconfirmed == "True")
-                CanSpendUnconfirmed = true;
-            else if (rawContent.CanSpendUnconfirmed == "False")
-                CanSpendUnconfirmed = false;
-            else if (rawContent.CanSpendUnconfirmed == null)
-                throw new Exception($"CanSpendUnconfirmed is missing from {ConfigFileSerializer.ConfigFilePath}");
-            else
-                throw new Exception($"Wrong CanSpendUnconfirmed is specified in {ConfigFileSerializer.ConfigFilePath}");
         }
         public static void Save()
         {
-            ConfigFileSerializer.Serialize(DefaultWalletFileName, Network.ToString(), ConnectionType.ToString(), CanSpendUnconfirmed.ToString());
+            ConfigFileSerializer.Serialize(DefaultWalletFileName, Network.ToString(), ConnectionType.ToString());
             Load();
         }
     }
@@ -74,21 +64,19 @@ namespace DotNetWallet
         public string DefaultWalletFileName { get; set; }
         public string Network { get; set; }
         public string ConnectionType { get; set; }
-        public string CanSpendUnconfirmed { get; set; }
 
         [JsonConstructor]
-        private ConfigFileSerializer(string walletFileName, string network, string connectionType, string canSpendUnconfirmed)
+        private ConfigFileSerializer(string walletFileName, string network, string connectionType)
         {
             DefaultWalletFileName = walletFileName;
             Network = network;
             ConnectionType = connectionType;
-            CanSpendUnconfirmed = canSpendUnconfirmed;
         }
 
-        internal static void Serialize(string walletFileName, string network, string connectionType, string canSpendUnconfirmed)
+        internal static void Serialize(string walletFileName, string network, string connectionType)
         {
             var content =
-                JsonConvert.SerializeObject(new ConfigFileSerializer(walletFileName, network, connectionType, canSpendUnconfirmed), Formatting.Indented);
+                JsonConvert.SerializeObject(new ConfigFileSerializer(walletFileName, network, connectionType), Formatting.Indented);
 
             File.WriteAllText(ConfigFilePath, content);
         }
@@ -101,7 +89,7 @@ namespace DotNetWallet
             var contentString = File.ReadAllText(ConfigFilePath);
             var configFileSerializer = JsonConvert.DeserializeObject<ConfigFileSerializer>(contentString);
 
-            return new ConfigFileSerializer(configFileSerializer.DefaultWalletFileName, configFileSerializer.Network, configFileSerializer.ConnectionType, configFileSerializer.CanSpendUnconfirmed);
+            return new ConfigFileSerializer(configFileSerializer.DefaultWalletFileName, configFileSerializer.Network, configFileSerializer.ConnectionType);
         }
     }
 }

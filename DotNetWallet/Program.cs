@@ -302,7 +302,8 @@ namespace DotNetWallet
                 BitcoinAddress addressToSend;
                 try
                 {
-                    addressToSend = BitcoinAddress.Create(GetArgumentValue(args, argName: "address", required: true), Config.Network);
+                    string address = GetArgumentValue(args, argName: "address", required: true);
+                    addressToSend = BitcoinAddress.Create(address, Config.Network);
                 }
                 catch (Exception ex)
                 {
@@ -351,15 +352,12 @@ namespace DotNetWallet
                     try
                     {
                         var txSizeInBytes = 250;
-                        using (var client = new HttpClient())
-                        {
-
-                            const string request = @"https://bitcoinfees.earn.com/api/v1/fees/recommended";
-                            var result = client.GetAsync(request, HttpCompletionOption.ResponseContentRead).Result;
-                            var json = JObject.Parse(result.Content.ReadAsStringAsync().Result);
-                            var fastestSatoshiPerByteFee = json.Value<decimal>("fastestFee");
-                            fee = new Money(fastestSatoshiPerByteFee * txSizeInBytes, MoneyUnit.Satoshi);
-                        }
+                        using var client = new HttpClient();
+                        const string request = @"https://bitcoinfees.earn.com/api/v1/fees/recommended";
+                        var result = client.GetAsync(request, HttpCompletionOption.ResponseContentRead).Result;
+                        var json = JObject.Parse(result.Content.ReadAsStringAsync().Result);
+                        var fastestSatoshiPerByteFee = json.Value<decimal>("fastestFee");
+                        fee = new Money(fastestSatoshiPerByteFee * txSizeInBytes, MoneyUnit.Satoshi);
                     }
                     catch
                     {
@@ -369,26 +367,7 @@ namespace DotNetWallet
                     WriteLine($"Fee: {fee.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")}btc");
 
                     // 5. How much money we can spend?
-                    Money availableAmount = Money.Zero;
-                    Money unconfirmedAvailableAmount = Money.Zero;
-                    foreach (var elem in unspentCoins)
-                    {
-                        // If can spend unconfirmed add all
-                        if (Config.CanSpendUnconfirmed)
-                        {
-                            availableAmount += elem.Key.Amount;
-                            if (!elem.Value)
-                                unconfirmedAvailableAmount += elem.Key.Amount;
-                        }
-                        // else only add confirmed ones
-                        else
-                        {
-                            if (elem.Value)
-                            {
-                                availableAmount += elem.Key.Amount;
-                            }
-                        }
-                    }
+                    Money availableAmount = unspentCoins.Sum(x => x.Key.Amount);
 
                     // 6. How much to spend?
                     Money amountToSend = null;
@@ -421,19 +400,7 @@ namespace DotNetWallet
                         }
                     }
 
-                    var confirmedAvailableAmount = availableAmount - unconfirmedAvailableAmount;
                     var totalOutAmount = amountToSend + fee;
-                    if (confirmedAvailableAmount < totalOutAmount)
-                    {
-                        var unconfirmedToSend = totalOutAmount - confirmedAvailableAmount;
-                        WriteLine();
-                        WriteLine($"In order to complete this transaction you have to spend {unconfirmedToSend.ToDecimal(MoneyUnit.BTC).ToString("0.#############################")} unconfirmed btc.");
-                        ConsoleKey response = GetYesNoAnswerFromUser();
-                        if (response == ConsoleKey.N)
-                        {
-                            Exit("User interruption.");
-                        }
-                    }
 
                     // 8. Select coins
                     WriteLine("Selecting coins...");

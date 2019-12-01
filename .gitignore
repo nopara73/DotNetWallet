@@ -243,3 +243,4 @@ ModelManifest.xml
 Wallets
 /src/DotNetWallet/Config.json
 /DotNetWallet/Config.json
+/DotNetWallet/Properties/launchSettings.json
