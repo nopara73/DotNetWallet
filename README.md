@@ -1,3 +1,5 @@
+This repository has been archived now. See its successor: https://github.com/zkSNACKs/WalletWasabi/
+
 # DotNetWallet
 Cross platform Bitcoin wallet implementation in .NET Core for a CodeProject tutorial: [Build a Bitcoin wallet in C#](https://www.codeproject.com/script/Articles/ArticleVersion.aspx?waid=214550&aid=1115639)  
   
